@@ -106,5 +106,43 @@ export async function handleMockRequest(endpoint: string, options: RequestInit) 
     };
   }
 
+  if (endpoint.startsWith('/recommendations') && (options.method === 'GET' || !options.method)) {
+    return [
+      {
+        cluster_id: "cluster-891",
+        category: "water_supply",
+        count: 145,
+        lat: 26.8467,
+        lng: 80.9462,
+        district: "Lucknow",
+        block: "Gomti Nagar",
+        priority_score: 92.5,
+        example_text: "Severe water shortage and broken pipes flooding the main street."
+      },
+      {
+        cluster_id: "cluster-892",
+        category: "electricity",
+        count: 89,
+        lat: 26.4499,
+        lng: 80.3319,
+        district: "Kanpur",
+        block: "Swaroop Nagar",
+        priority_score: 85.0,
+        example_text: "Continuous power cuts for the last 48 hours. Transformers are sparkling."
+      },
+      {
+        cluster_id: "cluster-893",
+        category: "roads",
+        count: 42,
+        lat: 25.3176,
+        lng: 82.9739,
+        district: "Varanasi",
+        block: "Lanka",
+        priority_score: 65.5,
+        example_text: "Large potholes causing daily accidents near the university gate."
+      }
+    ];
+  }
+
   throw new Error(`Mock endpoint not found: ${options.method} ${endpoint}`);
 }
