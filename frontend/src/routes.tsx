@@ -15,12 +15,21 @@ import TrackRequest from './pages/citizen/TrackRequest';
 import OfficerLayout from './components/OfficerLayout';
 import Overview from './pages/officer/Overview';
 import Recommendations from './pages/officer/Recommendations';
+import HotspotMap from './pages/officer/HotspotMap';
 
 import GapAnalysis from './pages/officer/GapAnalysis';
 import BudgetSimulator from './pages/officer/BudgetSimulator';
+import PolicyBrief from './pages/officer/PolicyBrief';
+import ImpactTracker from './pages/officer/ImpactTracker';
 
-// Admin (placeholders for phase 1/2)
-const Placeholder = ({ title }: { title: string }) => <div className="p-8">{title} - Coming soon</div>;
+// Admin
+import AdminLayout from './components/AdminLayout';
+import Datasets from './pages/admin/Datasets';
+import Regions from './pages/admin/Regions';
+import Users from './pages/admin/Users';
+
+// Placeholders for anything not yet built
+// const Placeholder = ({ title }: { title: string }) => <div className="p-8">{title} - Coming soon</div>;
 
 export const router = createBrowserRouter([
   {
@@ -55,12 +64,12 @@ export const router = createBrowserRouter([
         element: <OfficerLayout />,
         children: [
           { index: true, element: <Overview /> },
-          { path: 'hotspots', element: <Placeholder title="Hotspot Map" /> },
+          { path: 'hotspots', element: <HotspotMap /> },
           { path: 'gaps', element: <GapAnalysis /> },
           { path: 'recommendations', element: <Recommendations /> },
           { path: 'simulator', element: <BudgetSimulator /> },
-          { path: 'policy', element: <Placeholder title="Policy Brief" /> },
-          { path: 'impact', element: <Placeholder title="Impact Tracker" /> },
+          { path: 'policy', element: <PolicyBrief /> },
+          { path: 'impact', element: <ImpactTracker /> },
         ]
       }
     ],
@@ -69,7 +78,14 @@ export const router = createBrowserRouter([
     path: '/admin',
     element: <ProtectedRoute allowedRoles={['admin']} />,
     children: [
-      { index: true, element: <Placeholder title="Admin Setup" /> }
+      {
+        element: <AdminLayout />,
+        children: [
+          { index: true, element: <Datasets /> },
+          { path: 'regions', element: <Regions /> },
+          { path: 'users', element: <Users /> },
+        ]
+      }
     ],
   }
 ]);
