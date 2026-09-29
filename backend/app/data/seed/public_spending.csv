@@ -1,0 +1,121 @@
+district,block,category,spending
+North West Delhi,Rohini,water,3673016
+North West Delhi,Rohini,roads,1102025
+North West Delhi,Rohini,electricity,2637019
+North West Delhi,Rohini,health,1260628
+North West Delhi,Rohini,education,589015
+North West Delhi,Rohini,sanitation,4145211
+North West Delhi,Rohini,housing,860818
+North West Delhi,Rohini,agriculture,2367178
+North West Delhi,Rohini,transport,2179928
+North West Delhi,Rohini,other,4025798
+North West Delhi,Pitampura,water,1249911
+North West Delhi,Pitampura,roads,4679368
+North West Delhi,Pitampura,electricity,1296346
+North West Delhi,Pitampura,health,3963512
+North West Delhi,Pitampura,education,4810210
+North West Delhi,Pitampura,sanitation,4095774
+North West Delhi,Pitampura,housing,107247
+North West Delhi,Pitampura,agriculture,1534351
+North West Delhi,Pitampura,transport,3651829
+North West Delhi,Pitampura,other,2353890
+North West Delhi,Shalimar Bagh,water,389920
+North West Delhi,Shalimar Bagh,roads,3543502
+North West Delhi,Shalimar Bagh,electricity,2129991
+North West Delhi,Shalimar Bagh,health,2788416
+North West Delhi,Shalimar Bagh,education,4319277
+North West Delhi,Shalimar Bagh,sanitation,2817308
+North West Delhi,Shalimar Bagh,housing,2926401
+North West Delhi,Shalimar Bagh,agriculture,3645253
+North West Delhi,Shalimar Bagh,transport,4204308
+North West Delhi,Shalimar Bagh,other,3030623
+South Delhi,Saket,water,2366731
+South Delhi,Saket,roads,4443698
+South Delhi,Saket,electricity,1836852
+South Delhi,Saket,health,624839
+South Delhi,Saket,education,1330444
+South Delhi,Saket,sanitation,4470282
+South Delhi,Saket,housing,4126536
+South Delhi,Saket,agriculture,3193954
+South Delhi,Saket,transport,4133578
+South Delhi,Saket,other,3203273
+South Delhi,Hauz Khas,water,1063870
+South Delhi,Hauz Khas,roads,120621
+South Delhi,Hauz Khas,electricity,589475
+South Delhi,Hauz Khas,health,2770791
+South Delhi,Hauz Khas,education,4857233
+South Delhi,Hauz Khas,sanitation,3838451
+South Delhi,Hauz Khas,housing,2793986
+South Delhi,Hauz Khas,agriculture,2997893
+South Delhi,Hauz Khas,transport,4624668
+South Delhi,Hauz Khas,other,2501556
+South Delhi,Vasant Kunj,water,1496898
+South Delhi,Vasant Kunj,roads,4388522
+South Delhi,Vasant Kunj,electricity,2979715
+South Delhi,Vasant Kunj,health,2525401
+South Delhi,Vasant Kunj,education,3988943
+South Delhi,Vasant Kunj,sanitation,2027533
+South Delhi,Vasant Kunj,housing,1892715
+South Delhi,Vasant Kunj,agriculture,4883813
+South Delhi,Vasant Kunj,transport,2122007
+South Delhi,Vasant Kunj,other,4330905
+Mumbai Suburban,Andheri,water,453265
+Mumbai Suburban,Andheri,roads,606881
+Mumbai Suburban,Andheri,electricity,1835170
+Mumbai Suburban,Andheri,health,1206418
+Mumbai Suburban,Andheri,education,4168654
+Mumbai Suburban,Andheri,sanitation,444740
+Mumbai Suburban,Andheri,housing,2390332
+Mumbai Suburban,Andheri,agriculture,4312174
+Mumbai Suburban,Andheri,transport,1181487
+Mumbai Suburban,Andheri,other,2259798
+Mumbai Suburban,Bandra,water,4365667
+Mumbai Suburban,Bandra,roads,930308
+Mumbai Suburban,Bandra,electricity,2124287
+Mumbai Suburban,Bandra,health,4172503
+Mumbai Suburban,Bandra,education,3397054
+Mumbai Suburban,Bandra,sanitation,4351574
+Mumbai Suburban,Bandra,housing,806301
+Mumbai Suburban,Bandra,agriculture,1146438
+Mumbai Suburban,Bandra,transport,3973188
+Mumbai Suburban,Bandra,other,635931
+Mumbai Suburban,Borivali,water,2598848
+Mumbai Suburban,Borivali,roads,4669071
+Mumbai Suburban,Borivali,electricity,2030783
+Mumbai Suburban,Borivali,health,2703254
+Mumbai Suburban,Borivali,education,771533
+Mumbai Suburban,Borivali,sanitation,4483904
+Mumbai Suburban,Borivali,housing,3265577
+Mumbai Suburban,Borivali,agriculture,377018
+Mumbai Suburban,Borivali,transport,1601368
+Mumbai Suburban,Borivali,other,1608284
+Pune,Kothrud,water,269302
+Pune,Kothrud,roads,969668
+Pune,Kothrud,electricity,1899260
+Pune,Kothrud,health,1524399
+Pune,Kothrud,education,3849460
+Pune,Kothrud,sanitation,2739469
+Pune,Kothrud,housing,2663969
+Pune,Kothrud,agriculture,4262138
+Pune,Kothrud,transport,4418040
+Pune,Kothrud,other,3302538
+Pune,Shivajinagar,water,4505463
+Pune,Shivajinagar,roads,798897
+Pune,Shivajinagar,electricity,1551970
+Pune,Shivajinagar,health,4610629
+Pune,Shivajinagar,education,4182348
+Pune,Shivajinagar,sanitation,2258319
+Pune,Shivajinagar,housing,4448585
+Pune,Shivajinagar,agriculture,4346801
+Pune,Shivajinagar,transport,349126
+Pune,Shivajinagar,other,1646257
+Pune,Hadapsar,water,2593332
+Pune,Hadapsar,roads,3531036
+Pune,Hadapsar,electricity,4217802
+Pune,Hadapsar,health,1180990
+Pune,Hadapsar,education,2736418
+Pune,Hadapsar,sanitation,2025137
+Pune,Hadapsar,housing,3754084
+Pune,Hadapsar,agriculture,1428075
+Pune,Hadapsar,transport,1110030
+Pune,Hadapsar,other,3231069
