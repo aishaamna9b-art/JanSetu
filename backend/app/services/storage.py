@@ -18,3 +18,19 @@ def upload_file_to_storage(file: UploadFile, folder: str = "uploads") -> Optiona
     except Exception as e:
         print(f"Error uploading to storage: {e}")
         return None
+
+def upload_local_file_to_storage(local_path: str, destination_blob_name: str) -> Optional[str]:
+    """Uploads a local file to Firebase Storage and returns the public URL."""
+    if settings.DEV_MODE:
+        return f"https://mock-storage.com/{destination_blob_name}"
+        
+    try:
+        bucket = storage.bucket()
+        blob = bucket.blob(destination_blob_name)
+        blob.upload_from_filename(local_path)
+        blob.make_public()
+        return blob.public_url
+    except Exception as e:
+        print(f"Error uploading to storage: {e}")
+        return None
+
