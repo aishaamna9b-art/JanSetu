@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Camera, Send, Mic, Square } from 'lucide-react';
@@ -9,39 +9,70 @@ const SubmitRequest: React.FC = () => {
   const navigate = useNavigate();
   const [text, setText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [status, setStatus] = useState<'idle' | 'uploading' | 'understanding' | 'done'>('idle');
+
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
 
   const handleSubmit = async () => {
     setStatus('uploading');
     
-    // Create form data (mock implementation for phase 1/2)
     const formData = new FormData();
     formData.append('language', i18n.language);
     if (text) formData.append('text', text);
+    if (audioBlob) {
+      formData.append('audio', audioBlob, 'recording.webm');
+    }
     
-    setTimeout(async () => {
-      setStatus('understanding');
-      try {
-        const result = await fetchWithAuth('/requests', {
-          method: 'POST',
-          body: formData,
-        });
-        
-        setStatus('done');
-        setTimeout(() => {
-          navigate(`/citizen/confirmation/${result.tracking_id}`, { state: { data: result } });
-        }, 1000);
-      } catch (e) {
-        console.error(e);
-        setStatus('idle');
-        alert("Failed to submit");
-      }
-    }, 1500); // Simulate upload delay
+    setStatus('understanding');
+    try {
+      const result = await fetchWithAuth('/requests', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      setStatus('done');
+      navigate(`/citizen/confirmation/${result.tracking_id}`, { state: { data: result } });
+    } catch (e) {
+      console.error(e);
+      setStatus('idle');
+      alert("Failed to submit");
+    }
   };
 
-  const toggleRecording = () => {
-    setIsRecording(!isRecording);
-    // Real implementation would use MediaRecorder API
+  const toggleRecording = async () => {
+    if (isRecording) {
+      if (mediaRecorderRef.current) {
+        mediaRecorderRef.current.stop();
+      }
+      setIsRecording(false);
+    } else {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mediaRecorder = new MediaRecorder(stream);
+        mediaRecorderRef.current = mediaRecorder;
+        chunksRef.current = [];
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) {
+            chunksRef.current.push(e.data);
+          }
+        };
+
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+          setAudioBlob(blob);
+          stream.getTracks().forEach(track => track.stop());
+        };
+
+        mediaRecorder.start();
+        setIsRecording(true);
+      } catch (err) {
+        console.error("Error accessing microphone:", err);
+        alert("Microphone access is required to record audio.");
+      }
+    }
   };
 
   if (status !== 'idle') {
@@ -70,6 +101,12 @@ const SubmitRequest: React.FC = () => {
         </div>
         
         {isRecording && <p className="text-center text-red-500 font-bold animate-pulse">Recording...</p>}
+        {!isRecording && audioBlob && (
+          <div className="flex flex-col items-center space-y-2">
+            <audio src={URL.createObjectURL(audioBlob)} controls className="h-10 w-full max-w-xs" />
+            <button onClick={() => setAudioBlob(null)} className="text-sm text-red-500 underline">Remove Audio</button>
+          </div>
+        )}
 
         <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           <textarea
@@ -89,7 +126,7 @@ const SubmitRequest: React.FC = () => {
 
       <button
         onClick={handleSubmit}
-        disabled={!text && !isRecording}
+        disabled={!text && !isRecording && !audioBlob}
         className="w-full py-4 mt-6 bg-primary-600 text-white font-bold text-lg rounded-xl shadow-md disabled:bg-gray-300 disabled:shadow-none flex justify-center items-center space-x-2"
       >
         <span>{t('submit')}</span>

@@ -34,7 +34,10 @@ const Confirmation: React.FC = () => {
               {data.confirmation_message}
             </p>
             {data.confirmation_audio_url && (
-              <button className="mx-auto flex items-center space-x-2 text-primary-600 bg-primary-50 py-2 px-4 rounded-full">
+              <button 
+                onClick={() => new Audio(data.confirmation_audio_url).play()}
+                className="mx-auto flex items-center space-x-2 text-primary-600 bg-primary-50 py-2 px-4 rounded-full hover:bg-primary-100 transition-colors"
+              >
                 <Volume2 size={20} />
                 <span>Play Message</span>
               </button>

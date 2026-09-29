@@ -35,18 +35,25 @@ const TrackRequest: React.FC = () => {
 
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-6">
         <p className="text-sm text-gray-500 mb-1">{t('tracking_id')}</p>
-        <p className="font-mono text-lg font-bold text-gray-900 mb-4">{request.tracking_id}</p>
+        <p className="font-mono text-lg font-bold text-gray-900 mb-4">{request.request_details?.tracking_id || request.tracking_id}</p>
         
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4 mb-6">
           <div>
             <p className="text-sm text-gray-500">{t('category')}</p>
-            <p className="font-semibold text-gray-900 capitalize">{request.category}</p>
+            <p className="font-semibold text-gray-900 capitalize">{request.request_details?.category || request.category}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500">{t('urgency')}</p>
-            <p className="font-semibold text-gray-900">{request.urgency}/5</p>
+            <p className="font-semibold text-gray-900">{request.request_details?.urgency || request.urgency}/5</p>
           </div>
         </div>
+
+        {((request.request_details?.original_text || request.original_text) && 
+          <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Original Request</p>
+            <p className="text-gray-800 italic">"{request.request_details?.original_text || request.original_text}"</p>
+          </div>
+        )}
       </div>
 
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
