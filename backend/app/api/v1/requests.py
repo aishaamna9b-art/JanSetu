@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Form, UploadFile, File, HTTPException
+from fastapi import APIRouter, Depends, Form, UploadFile, File, HTTPException, Body
 from typing import Optional, List
 from datetime import datetime, timezone
 import uuid
@@ -196,3 +196,34 @@ def get_request_detail(tracking_id: str, current_user: dict = Depends(get_curren
         request_details=RequestResponse(**request_data),
         timeline=timeline
     )
+
+@router.patch("/{id}/status")
+def update_request_status(
+    id: str,
+    status: str = Body(...),
+    note: Optional[str] = Body(None),
+    current_user: dict = Depends(require_role(["officer", "admin"]))
+):
+    db = get_db()
+    if not db:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+        
+    req_ref = db.collection("requests").document(id)
+    doc = req_ref.get()
+    if not doc.exists:
+        raise HTTPException(status_code=404, detail="Request not found")
+        
+    req_ref.update({"status": status})
+    
+    now = datetime.now(timezone.utc)
+    timeline_ref = req_ref.collection("timeline").document()
+    timeline_data = {
+        "status": status,
+        "timestamp": now.isoformat()
+    }
+    if note:
+        timeline_data["note"] = note
+    timeline_ref.set(timeline_data)
+    
+    return {"message": "Status updated successfully"}
+
