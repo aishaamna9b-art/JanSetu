@@ -30,7 +30,18 @@ def test_create_request_text():
     else:
         print("Create text request failed:", response.status_code, response.text)
 
+def test_recommendations():
+    response = client.get(
+        "/api/v1/recommendations",
+        headers={"Authorization": "Bearer dev-officer-token"}
+    )
+    if response.status_code == 200:
+        print("Recommendations fetched successfully:", len(response.json()), "items")
+    else:
+        print("Recommendations fetch failed:", response.status_code, response.text)
+
 if __name__ == "__main__":
     test_health()
     test_create_request_text()
+    test_recommendations()
     print("All tests completed.")
