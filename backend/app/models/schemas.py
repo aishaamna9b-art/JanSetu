@@ -22,6 +22,7 @@ class PhotoAnalysisSchema(BaseModel):
     detected_issue: str
     severity: int
     confidence: float
+    spam_score: float = 0.0
     
 class TimelineItem(BaseModel):
     status: str

@@ -61,14 +61,23 @@ def assign_to_cluster(
         old_urgency = best_cluster_data.get("urgency_avg", 3.0)
         new_urgency = ((old_urgency * (count - 1)) + urgency) / count
         
-        # We assume photo severity is updated elsewhere or default 0
-        photo_severity = best_cluster_data.get("photo_severity_avg", 0.0)
+        req_photo_severity = request_data.get("photo_severity", 0.0)
+        old_photo_severity = best_cluster_data.get("photo_severity_avg", 0.0)
+        
+        if req_photo_severity > 0:
+            # only average in if the new request actually has a photo
+            # alternatively, just treat 0 as "no photo" and average it in.
+            # Usually it's better to average over the number of requests that HAVE photos, 
+            # but for simplicity and since we use 0.0 as default, let's just do a normal moving average
+            pass
+            
+        new_photo_severity = ((old_photo_severity * (count - 1)) + req_photo_severity) / count
         
         # Calculate new priority
         score_res = calculate_priority_score(
             count=count,
             urgency_avg=new_urgency,
-            photo_severity_avg=photo_severity,
+            photo_severity_avg=new_photo_severity,
             district=district,
             block=block,
             category=category
@@ -82,6 +91,7 @@ def assign_to_cluster(
         clusters_ref.document(best_cluster_id).update({
             "count": count,
             "urgency_avg": new_urgency,
+            "photo_severity_avg": new_photo_severity,
             "priority_score": score_res["score"],
             "score_breakdown": score_res["breakdown"],
             "centroid_embedding": new_centroid.tolist()
@@ -93,10 +103,12 @@ def assign_to_cluster(
         # Create new cluster
         new_cluster_id = f"cluster-{uuid.uuid4().hex[:8]}"
         
+        req_photo_severity = request_data.get("photo_severity", 0.0)
+        
         score_res = calculate_priority_score(
             count=1,
             urgency_avg=float(urgency),
-            photo_severity_avg=0.0,
+            photo_severity_avg=req_photo_severity,
             district=district,
             block=block,
             category=category
@@ -111,7 +123,7 @@ def assign_to_cluster(
             "lng": request_data.get("location", {}).get("lng", 0.0),
             "count": 1,
             "urgency_avg": float(urgency),
-            "photo_severity_avg": 0.0,
+            "photo_severity_avg": req_photo_severity,
             "priority_score": score_res["score"],
             "score_breakdown": score_res["breakdown"],
             "centroid_embedding": embedding,
