@@ -91,3 +91,37 @@ class GapAnalysisResponse(BaseModel):
     infra_index: float
     public_spending: float
     gap_score: float
+
+class ScoreBreakdown(BaseModel):
+    volume: float
+    urgency: float
+    severity: float
+    infra_gap: float
+    population: float
+
+class ProjectRecommendation(BaseModel):
+    project_id: str
+    cluster_id: str
+    title: str
+    category: str
+    region: str
+    people_served: int
+    cost_estimate: float
+    priority_score: float
+    score_breakdown: ScoreBreakdown
+    ai_justification: str
+
+class SimulatorRunRequest(BaseModel):
+    budget: float
+    state: str
+    district: str
+    categories: List[str]
+
+class SimulatorRunResponse(BaseModel):
+    selected: List[ProjectRecommendation]
+    total_cost: float
+    remaining_budget: float
+    people_served: int
+    gaps_closed: int
+    ai_justification: str
+
