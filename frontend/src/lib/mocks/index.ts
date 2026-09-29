@@ -106,40 +106,102 @@ export async function handleMockRequest(endpoint: string, options: RequestInit) 
     };
   }
 
+  if (endpoint.startsWith('/analytics/gaps') && (options.method === 'GET' || !options.method)) {
+    return [
+      {
+        block: "Gomti Nagar",
+        district: "Lucknow",
+        category: "water",
+        demand_count: 145,
+        infra_index: 0.35,
+        spending: 1200000,
+        gap_score: 0.92
+      },
+      {
+        block: "Swaroop Nagar",
+        district: "Kanpur",
+        category: "electricity",
+        demand_count: 89,
+        infra_index: 0.65,
+        spending: 3400000,
+        gap_score: 0.45
+      },
+      {
+        block: "Lanka",
+        district: "Varanasi",
+        category: "roads",
+        demand_count: 42,
+        infra_index: 0.40,
+        spending: 800000,
+        gap_score: 0.78
+      },
+      {
+        block: "Alambagh",
+        district: "Lucknow",
+        category: "sanitation",
+        demand_count: 110,
+        infra_index: 0.20,
+        spending: 500000,
+        gap_score: 0.95
+      }
+    ];
+  }
+
   if (endpoint.startsWith('/recommendations') && (options.method === 'GET' || !options.method)) {
     return [
       {
+        project_id: "proj-901",
         cluster_id: "cluster-891",
-        category: "water_supply",
-        count: 145,
-        lat: 26.8467,
-        lng: 80.9462,
-        district: "Lucknow",
-        block: "Gomti Nagar",
-        priority_score: 92.5,
-        example_text: "Severe water shortage and broken pipes flooding the main street."
+        title: "Gomti Nagar Main Pipeline Replacement",
+        category: "water",
+        region: "Gomti Nagar, Lucknow",
+        people_served: 15000,
+        cost_estimate: 2500000,
+        priority_score: 95,
+        score_breakdown: {
+          volume: 20,
+          urgency: 25,
+          severity: 20,
+          infra_gap: 15,
+          population: 15
+        },
+        ai_justification: "High volume of severe water leak reports combined with a low historical infrastructure index for water supply in this block."
       },
       {
-        cluster_id: "cluster-892",
-        category: "electricity",
-        count: 89,
-        lat: 26.4499,
-        lng: 80.3319,
-        district: "Kanpur",
-        block: "Swaroop Nagar",
-        priority_score: 85.0,
-        example_text: "Continuous power cuts for the last 48 hours. Transformers are sparkling."
+        project_id: "proj-902",
+        cluster_id: "cluster-894",
+        title: "Alambagh Sanitation Overhaul",
+        category: "sanitation",
+        region: "Alambagh, Lucknow",
+        people_served: 22000,
+        cost_estimate: 1800000,
+        priority_score: 88,
+        score_breakdown: {
+          volume: 18,
+          urgency: 20,
+          severity: 15,
+          infra_gap: 25,
+          population: 10
+        },
+        ai_justification: "Critical sanitation gaps identified. Very low spending in this area despite growing population and increasing health-related citizen complaints."
       },
       {
+        project_id: "proj-903",
         cluster_id: "cluster-893",
+        title: "Lanka University Road Repair",
         category: "roads",
-        count: 42,
-        lat: 25.3176,
-        lng: 82.9739,
-        district: "Varanasi",
-        block: "Lanka",
-        priority_score: 65.5,
-        example_text: "Large potholes causing daily accidents near the university gate."
+        region: "Lanka, Varanasi",
+        people_served: 8500,
+        cost_estimate: 3200000,
+        priority_score: 72,
+        score_breakdown: {
+          volume: 10,
+          urgency: 15,
+          severity: 25,
+          infra_gap: 12,
+          population: 10
+        },
+        ai_justification: "Large potholes causing daily accidents. Though demand count is lower, the severity of the issue requires immediate attention."
       }
     ];
   }
