@@ -1,0 +1,209 @@
+{
+  "authSession": {
+    "uid": "12345",
+    "role": "citizen",
+    "language": "hi",
+    "region": "Delhi"
+  },
+  "citizenRequestMock": {
+    "id": "req-101",
+    "tracking_id": "TRK-987654",
+    "category": "water",
+    "sub_issue": "pipe_leak",
+    "urgency": 4, 
+    "sentiment": "frustrated",
+    "translated_text": "There is a massive water leak in the main pipeline for 3 days.",
+    "original_text": "3 din se main pipeline mein paani leak ho raha hai.",
+    "confirmation_message": "Aapki shikayat darj kar li gayi hai. Tracking ID: TRK-987654",
+    "confirmation_audio_url": "https://storage.googleapis.com/.../audio.mp3",
+    "photo_analysis": {
+      "matches_request": true,
+      "detected_issue": "water_pooling_large_leak",
+      "severity": 4,
+      "confidence": 0.92
+    },
+    "cluster_id": "cluster-55",
+    "status": "received"
+  },
+  "citizenRequestsMock": [
+    {
+      "id": "req-101",
+      "tracking_id": "TRK-987654",
+      "category": "water",
+      "status": "received",
+      "translated_text": "There is a massive water leak in the main pipeline for 3 days.",
+      "timestamp": "2024-03-01T10:00:00Z"
+    },
+    {
+      "id": "req-102",
+      "tracking_id": "TRK-223344",
+      "category": "electricity",
+      "status": "verified",
+      "translated_text": "Power outage in our area since yesterday night.",
+      "timestamp": "2024-03-02T14:30:00Z"
+    }
+  ],
+  "requestDetailsMock": {
+    "request_details": {
+      "id": "req-101",
+      "tracking_id": "TRK-987654",
+      "category": "water",
+      "sub_issue": "pipe_leak",
+      "urgency": 4, 
+      "sentiment": "frustrated",
+      "translated_text": "There is a massive water leak in the main pipeline for 3 days.",
+      "status": "verified"
+    },
+    "timeline": [
+      {
+        "status": "received",
+        "timestamp": "2024-03-01T10:00:00Z"
+      },
+      {
+        "status": "verified",
+        "timestamp": "2024-03-02T14:30:00Z"
+      }
+    ]
+  },
+  "analyticsSummaryMock": {
+    "total_requests": 1500,
+    "resolved_rate": 0.45,
+    "top_categories": [
+      {"category": "water", "count": 500},
+      {"category": "roads", "count": 420},
+      {"category": "electricity", "count": 300}
+    ],
+    "by_status": {
+      "received": 200,
+      "verified": 300,
+      "under_review": 150,
+      "funded": 100,
+      "completed": 675,
+      "rejected": 75
+    },
+    "trend": [
+      {"date": "2024-03-01", "count": 50},
+      {"date": "2024-03-02", "count": 65},
+      {"date": "2024-03-03", "count": 45}
+    ]
+  },
+  "analyticsHotspotsMock": [
+    {
+      "cluster_id": "cluster-55",
+      "category": "water",
+      "count": 45,
+      "lat": 28.7041,
+      "lng": 77.1025,
+      "district": "North West Delhi",
+      "block": "Rohini",
+      "priority_score": 0.88,
+      "example_text": "No water supply for 3 days in Sector 15."
+    },
+    {
+      "cluster_id": "cluster-56",
+      "category": "roads",
+      "count": 32,
+      "lat": 28.6912,
+      "lng": 77.1121,
+      "district": "North West Delhi",
+      "block": "Pitampura",
+      "priority_score": 0.75,
+      "example_text": "Large potholes causing daily accidents."
+    }
+  ],
+  "analyticsGapsMock": [
+    {
+      "block": "Rohini",
+      "district": "North West Delhi",
+      "category": "water",
+      "demand_count": 120,
+      "infra_index": 0.4,
+      "spending": 500000,
+      "gap_score": 0.92
+    },
+    {
+      "block": "Pitampura",
+      "district": "North West Delhi",
+      "category": "roads",
+      "demand_count": 85,
+      "infra_index": 0.5,
+      "spending": 800000,
+      "gap_score": 0.78
+    }
+  ],
+  "recommendationsMock": [
+    {
+      "project_id": "proj-901",
+      "cluster_id": "cluster-55",
+      "title": "Rohini Sector 15 Main Pipeline Replacement",
+      "category": "water",
+      "region": "Rohini, North West Delhi",
+      "people_served": 15000,
+      "cost_estimate": 2500000,
+      "priority_score": 95,
+      "score_breakdown": {
+        "volume": 20,
+        "urgency": 25,
+        "severity": 20,
+        "infra_gap": 15,
+        "population": 15
+      },
+      "ai_justification": "High volume of severe water leak reports combined with a low historical infrastructure index for water supply in this block."
+    },
+    {
+      "project_id": "proj-902",
+      "cluster_id": "cluster-56",
+      "title": "Pitampura Main Road Resurfacing",
+      "category": "roads",
+      "region": "Pitampura, North West Delhi",
+      "people_served": 10000,
+      "cost_estimate": 1500000,
+      "priority_score": 82,
+      "score_breakdown": {
+        "volume": 15,
+        "urgency": 20,
+        "severity": 15,
+        "infra_gap": 12,
+        "population": 20
+      },
+      "ai_justification": "Significant number of complaints regarding potholes and accidents, affecting a high-traffic area."
+    }
+  ],
+  "simulatorRunMock": {
+    "selected": [
+      {
+        "project_id": "proj-901",
+        "title": "Rohini Sector 15 Main Pipeline Replacement",
+        "cost": 2500000
+      },
+      {
+        "project_id": "proj-902",
+        "title": "Pitampura Main Road Resurfacing",
+        "cost": 1500000
+      }
+    ],
+    "total_cost": 4000000,
+    "remaining_budget": 1000000,
+    "people_served": 25000,
+    "gaps_closed": 2,
+    "ai_justification": "Prioritized water and road projects in Rohini and Pitampura to maximize people served within the 50L budget constraint."
+  },
+  "briefsGenerateMock": {
+    "brief_url": "https://storage.googleapis.com/.../brief_delhi_nw.pdf",
+    "summary": "Executive Summary: Top priority remains water infrastructure in Rohini block, with 120 severe complaints in the past week. Recommend allocating 2.5M INR for pipeline overhaul."
+  },
+  "impactMock": [
+    {
+      "district": "North West Delhi",
+      "raised": 1000,
+      "resolved": 600,
+      "resolution_rate": 0.6
+    },
+    {
+      "district": "South Delhi",
+      "raised": 800,
+      "resolved": 550,
+      "resolution_rate": 0.68
+    }
+  ]
+}
