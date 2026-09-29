@@ -17,6 +17,7 @@ import Overview from './pages/officer/Overview';
 import Recommendations from './pages/officer/Recommendations';
 
 import GapAnalysis from './pages/officer/GapAnalysis';
+import BudgetSimulator from './pages/officer/BudgetSimulator';
 
 // Admin (placeholders for phase 1/2)
 const Placeholder = ({ title }: { title: string }) => <div className="p-8">{title} - Coming soon</div>;
@@ -57,7 +58,7 @@ export const router = createBrowserRouter([
           { path: 'hotspots', element: <Placeholder title="Hotspot Map" /> },
           { path: 'gaps', element: <GapAnalysis /> },
           { path: 'recommendations', element: <Recommendations /> },
-          { path: 'simulator', element: <Placeholder title="Budget Simulator" /> },
+          { path: 'simulator', element: <BudgetSimulator /> },
           { path: 'policy', element: <Placeholder title="Policy Brief" /> },
           { path: 'impact', element: <Placeholder title="Impact Tracker" /> },
         ]
