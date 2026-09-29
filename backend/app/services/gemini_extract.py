@@ -21,6 +21,17 @@ def extract_request_details(text: str) -> GeminiExtractionResult:
             translated_text=None
         )
         
+    if settings.DEV_MODE or not settings.GEMINI_API_KEY:
+        return GeminiExtractionResult(
+            category=Category.WATER,
+            sub_issue="mock issue",
+            urgency=3,
+            sentiment="neutral",
+            vulnerable_group=False,
+            location_hint="mock location",
+            translated_text=text
+        )
+
     client = get_gemini_client()
     
     prompt = f"""

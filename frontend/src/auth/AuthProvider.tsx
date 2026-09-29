@@ -26,7 +26,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
-      if (firebaseUser || import.meta.env.VITE_USE_MOCKS === 'true') {
+      // We allow session fetching if firebaseUser is present, OR if we are using mocks, 
+      // OR if we have a mock_role stored (to support backend DEV_MODE testing without mocks).
+      if (firebaseUser || import.meta.env.VITE_USE_MOCKS === 'true' || localStorage.getItem('mock_role')) {
         try {
           const sessionData = await fetchWithAuth('/auth/session', { method: 'POST' });
           setSession(sessionData);

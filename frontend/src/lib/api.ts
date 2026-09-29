@@ -15,6 +15,9 @@ export async function fetchWithAuth(endpoint: string, options: RequestInit = {})
   let token = '';
   if (user) {
     token = await user.getIdToken();
+  } else if (!USE_MOCKS) {
+    const role = localStorage.getItem('mock_role') || 'citizen';
+    token = `dev-${role}-token`;
   }
 
   const headers = new Headers(options.headers);
