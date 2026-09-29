@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from typing import Optional, List
-from app.models.schemas import AnalyticsSummaryResponse, HotspotResponse, TopCategory, TrendItem
+from app.models.schemas import AnalyticsSummaryResponse, HotspotResponse, TopCategory, TrendItem, GapAnalysisResponse
 from app.core.security import require_role
 from app.core.firebase import get_db
 import json
+import pandas as pd
 from collections import defaultdict
 from pathlib import Path
 from datetime import datetime
@@ -185,3 +186,83 @@ def get_analytics_hotspots(
             
         clusters.sort(key=lambda x: x.priority_score, reverse=True)
         return clusters
+
+@router.get("/gaps", response_model=List[GapAnalysisResponse])
+def get_gap_analysis(
+    district: Optional[str] = Query(None),
+    current_user: dict = Depends(require_role(["officer", "admin"]))
+):
+    db = get_db()
+    
+    demand = defaultdict(int)
+    
+    if db:
+        query = db.collection("requests")
+        if district:
+            query = query.where("location.district", "==", district)
+        for doc in query.stream():
+            d = doc.to_dict()
+            loc = d.get("location", {})
+            dist = loc.get("district")
+            blk = loc.get("block")
+            cat = d.get("category")
+            if dist and blk and cat:
+                demand[(dist, blk, cat)] += 1
+    else:
+        raw_data = get_local_data()
+        for d in raw_data:
+            loc = d.get("location", {})
+            dist = loc.get("district")
+            blk = loc.get("block")
+            cat = d.get("category")
+            if district and dist != district:
+                continue
+            if dist and blk and cat:
+                demand[(dist, blk, cat)] += 1
+                
+    data_dir = Path(__file__).parent.parent.parent / "data" / "seed"
+    try:
+        df_demo = pd.read_csv(data_dir / "demographics.csv")
+        df_infra = pd.read_csv(data_dir / "infra_index.csv")
+        df_spend = pd.read_csv(data_dir / "public_spending.csv")
+        
+        df = df_infra.merge(df_demo, on=["district", "block"], how="left")
+        df = df.merge(df_spend, on=["district", "block", "category"], how="left")
+        
+        if district:
+            df = df[df["district"] == district]
+            
+        results = []
+        for _, row in df.iterrows():
+            dist = row["district"]
+            blk = row["block"]
+            cat = row["category"]
+            
+            pop = int(row.get("population", 100000))
+            infra = float(row.get("infra_index", 0.5))
+            spending = float(row.get("spending", 100000))
+            
+            d_count = demand.get((dist, blk, cat), 0)
+            
+            spending_norm = spending / max(pop, 1)
+            
+            gap_score = (d_count * 10.0) + ((1.0 - infra) * 50.0) - min(spending_norm / 10.0, 20.0)
+            gap_score = max(0.0, round(gap_score, 2))
+            
+            results.append(GapAnalysisResponse(
+                district=dist,
+                block=blk,
+                category=cat,
+                demand_count=d_count,
+                population=pop,
+                infra_index=round(infra, 2),
+                public_spending=round(spending, 2),
+                gap_score=gap_score
+            ))
+            
+        results.sort(key=lambda x: x.gap_score, reverse=True)
+        return results
+        
+    except Exception as e:
+        print(f"Error in gap analysis: {e}")
+        return []
