@@ -53,3 +53,30 @@ class GeminiExtractionResult(BaseModel):
     sentiment: str
     vulnerable_group: bool
     location_hint: Optional[str] = None
+    translated_text: Optional[str] = None
+
+class TopCategory(BaseModel):
+    category: str
+    count: int
+
+class TrendItem(BaseModel):
+    date: str
+    count: int
+
+class AnalyticsSummaryResponse(BaseModel):
+    total_requests: int
+    resolved_rate: float
+    top_categories: List[TopCategory]
+    by_status: dict
+    trend: List[TrendItem]
+
+class HotspotResponse(BaseModel):
+    cluster_id: str
+    category: str
+    count: int
+    lat: float
+    lng: float
+    district: str
+    block: str
+    priority_score: float
+    example_text: str
