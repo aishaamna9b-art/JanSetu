@@ -80,3 +80,13 @@ class HotspotResponse(BaseModel):
     block: str
     priority_score: float
     example_text: str
+
+class GapAnalysisResponse(BaseModel):
+    district: str
+    block: str
+    category: str
+    demand_count: int
+    population: int
+    infra_index: float
+    public_spending: float
+    gap_score: float
