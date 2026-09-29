@@ -6,6 +6,11 @@ from app.models.schemas import RequestResponse, RequestDetailResponse, TimelineI
 from app.core.security import get_current_user, require_role
 from app.services.gemini_extract import extract_request_details
 from app.core.firebase import get_db
+from app.services.speech import transcribe_audio
+from app.services.translation import translate_to_english
+from app.services.tts import generate_tts_url
+from app.services.storage import upload_file_to_storage
+from app.config import settings
 
 router = APIRouter()
 
@@ -22,10 +27,22 @@ async def create_request(
     photo: Optional[UploadFile] = File(None),
     current_user: dict = Depends(require_role(["citizen"]))
 ):
-    original_text = text or "No text provided"
+    original_text = text or ""
     
-    extraction = extract_request_details(original_text)
-    translated_text = extraction.translated_text or original_text
+    if audio:
+        upload_file_to_storage(audio, folder="audio")
+        audio_bytes = await audio.read()
+        original_text = transcribe_audio(audio_bytes, language_code=language)
+        
+    if photo:
+        upload_file_to_storage(photo, folder="photos")
+        
+    if not original_text:
+        original_text = "No text provided"
+        
+    translated_text = translate_to_english(original_text)
+    
+    extraction = extract_request_details(translated_text)
     
     tracking_id = f"TRK-{uuid.uuid4().hex[:8].upper()}"
     req_id = f"req-{uuid.uuid4().hex[:12]}"
@@ -33,7 +50,15 @@ async def create_request(
     cluster_id = None
     photo_analysis = None
     
-    confirmation_message = f"Your request has been received. Tracking ID: {tracking_id}"
+    if language != "en" and not settings.DEV_MODE:
+        from google.cloud import translate_v2 as translate
+        client = translate.Client()
+        result = client.translate(f"Your request has been received. Tracking ID is {tracking_id}", target_language=language[:2])
+        confirmation_message = result["translatedText"]
+    else:
+        confirmation_message = f"Your request has been received. Tracking ID is {tracking_id}"
+        
+    confirmation_audio_url = generate_tts_url(confirmation_message, language_code=language)
     
     now = datetime.now(timezone.utc)
     
@@ -81,7 +106,7 @@ async def create_request(
         translated_text=translated_text,
         original_text=original_text,
         confirmation_message=confirmation_message,
-        confirmation_audio_url=None,
+        confirmation_audio_url=confirmation_audio_url,
         photo_analysis=photo_analysis,
         cluster_id=cluster_id,
         status="received"
