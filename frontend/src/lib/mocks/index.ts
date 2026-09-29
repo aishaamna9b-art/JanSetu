@@ -206,5 +206,45 @@ export async function handleMockRequest(endpoint: string, options: RequestInit) 
     ];
   }
 
+  if (endpoint === '/simulator/run' && options.method === 'POST') {
+    const body = typeof options.body === 'string' ? JSON.parse(options.body) : {};
+    const budget = body.total_budget || 5000000;
+    
+    return {
+      status: "success",
+      data: {
+        selected_projects: [
+          {
+            cluster_id: "c123",
+            category: "water",
+            title: "Gomti Nagar Main Pipeline Replacement",
+            location: { lat: 25.594, lng: 85.137, address: "Patna, Bihar" },
+            estimated_cost: 2000000,
+            impact_score: 88,
+            people_served: 5000,
+            ai_justification: "High urgency water shortage affecting 5000 people. Low existing infrastructure."
+          },
+          {
+            cluster_id: "c124",
+            category: "roads",
+            title: "Lanka University Road Repair",
+            location: { lat: 25.611, lng: 85.144, address: "Patna, Bihar" },
+            estimated_cost: 2500000,
+            impact_score: 75,
+            people_served: 7000,
+            ai_justification: "Severe road damage causing daily accidents."
+          }
+        ],
+        summary: {
+          total_allocated: 4500000,
+          remaining_budget: Math.max(0, budget - 4500000),
+          projects_funded: 2,
+          total_people_served: 12000
+        },
+        ai_analysis: "The allocation prioritizes immediate water needs in underserved areas, leaving sufficient budget for secondary road repairs."
+      }
+    };
+  }
+
   throw new Error(`Mock endpoint not found: ${options.method} ${endpoint}`);
 }
