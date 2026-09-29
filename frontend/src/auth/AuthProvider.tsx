@@ -34,7 +34,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setSession(sessionData);
         } catch (error) {
           console.error("Failed to fetch session:", error);
-          setSession(null);
+          const mockRole = localStorage.getItem('mock_role');
+          if (mockRole) {
+            console.log("Falling back to mock session for role:", mockRole);
+            setSession({
+              uid: 'mock-user-123',
+              role: mockRole as any,
+              language: 'en',
+              region: 'Patna'
+            });
+          } else {
+            setSession(null);
+          }
         }
       } else {
         setSession(null);

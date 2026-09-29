@@ -17,6 +17,12 @@ from app.config import settings
 
 router = APIRouter()
 
+# Global in-memory mock DB for when Firebase is not configured
+MOCK_DB = {
+    "requests": {},
+    "timelines": {}
+}
+
 @router.post("", response_model=RequestResponse)
 async def create_request(
     text: Optional[str] = Form(None),
@@ -110,7 +116,8 @@ async def create_request(
         "vulnerable_group": extraction.vulnerable_group,
         "photo_analysis": photo_analysis,
         "cluster_id": cluster_id,
-        "created_at": now.isoformat()
+        "created_at": now.isoformat(),
+        "confirmation_audio_url": confirmation_audio_url
     }
     
     db = get_db()
@@ -123,6 +130,12 @@ async def create_request(
             "status": "received",
             "timestamp": now.isoformat()
         })
+    else:
+        MOCK_DB["requests"][req_id] = request_doc
+        MOCK_DB["timelines"][req_id] = [{
+            "status": "received",
+            "timestamp": now.isoformat()
+        }]
     
     return RequestResponse(
         id=req_id,
@@ -143,55 +156,70 @@ async def create_request(
 @router.get("/mine", response_model=List[RequestResponse])
 def get_my_requests(current_user: dict = Depends(require_role(["citizen"]))):
     db = get_db()
-    if not db:
-        return []
-        
-    requests_query = db.collection("requests").where("uid", "==", current_user["uid"]).stream()
-    
     results = []
-    for doc in requests_query:
-        data = doc.to_dict()
-        if "location" in data:
-            del data["location"]
-        if "vulnerable_group" in data:
-            del data["vulnerable_group"]
-        if "created_at" in data:
-            del data["created_at"]
-        if "uid" in data:
-            del data["uid"]
-        results.append(RequestResponse(**data))
-        
+    
+    if db:
+        requests_query = db.collection("requests").where("uid", "==", current_user["uid"]).stream()
+        for doc in requests_query:
+            data = doc.to_dict()
+            for key in ["location", "vulnerable_group", "created_at", "uid"]:
+                if key in data:
+                    del data[key]
+            results.append(RequestResponse(**data))
+    else:
+        for req_id, data in MOCK_DB["requests"].items():
+            if data["uid"] == current_user["uid"]:
+                cleaned_data = data.copy()
+                for key in ["location", "vulnerable_group", "created_at", "uid"]:
+                    if key in cleaned_data:
+                        del cleaned_data[key]
+                results.append(RequestResponse(**cleaned_data))
+                
     return results
 
 @router.get("/{tracking_id}", response_model=RequestDetailResponse)
 def get_request_detail(tracking_id: str, current_user: dict = Depends(get_current_user)):
     db = get_db()
-    if not db:
-        raise HTTPException(status_code=500, detail="Database not initialized")
-        
-    requests_query = db.collection("requests").where("tracking_id", "==", tracking_id).stream()
-    
     request_data = None
     req_id = None
-    for doc in requests_query:
-        request_data = doc.to_dict()
-        req_id = doc.id
-        break
-        
-    if not request_data:
-        raise HTTPException(status_code=404, detail="Request not found")
-        
-    # Clean up internal fields not in schema
-    for key in ["location", "vulnerable_group", "created_at", "uid"]:
-        if key in request_data:
-            del request_data[key]
-            
-    timeline_docs = db.collection("requests").document(req_id).collection("timeline").order_by("timestamp").stream()
     timeline = []
-    for t_doc in timeline_docs:
-        t_data = t_doc.to_dict()
-        timeline.append(TimelineItem(status=t_data["status"], timestamp=t_data["timestamp"]))
-        
+    
+    if db:
+        requests_query = db.collection("requests").where("tracking_id", "==", tracking_id).stream()
+        for doc in requests_query:
+            request_data = doc.to_dict()
+            req_id = doc.id
+            break
+            
+        if not request_data:
+            raise HTTPException(status_code=404, detail="Request not found")
+            
+        for key in ["location", "vulnerable_group", "created_at", "uid"]:
+            if key in request_data:
+                del request_data[key]
+                
+        timeline_docs = db.collection("requests").document(req_id).collection("timeline").order_by("timestamp").stream()
+        for t_doc in timeline_docs:
+            t_data = t_doc.to_dict()
+            timeline.append(TimelineItem(status=t_data["status"], timestamp=t_data["timestamp"]))
+    else:
+        for r_id, data in MOCK_DB["requests"].items():
+            if data["tracking_id"] == tracking_id:
+                request_data = data.copy()
+                req_id = r_id
+                break
+                
+        if not request_data:
+            raise HTTPException(status_code=404, detail="Request not found")
+            
+        for key in ["location", "vulnerable_group", "created_at", "uid"]:
+            if key in request_data:
+                del request_data[key]
+                
+        if req_id in MOCK_DB["timelines"]:
+            for t_data in MOCK_DB["timelines"][req_id]:
+                timeline.append(TimelineItem(status=t_data["status"], timestamp=t_data["timestamp"]))
+                
     return RequestDetailResponse(
         request_details=RequestResponse(**request_data),
         timeline=timeline
@@ -205,25 +233,39 @@ def update_request_status(
     current_user: dict = Depends(require_role(["officer", "admin"]))
 ):
     db = get_db()
-    if not db:
-        raise HTTPException(status_code=500, detail="Database not initialized")
-        
-    req_ref = db.collection("requests").document(id)
-    doc = req_ref.get()
-    if not doc.exists:
-        raise HTTPException(status_code=404, detail="Request not found")
-        
-    req_ref.update({"status": status})
-    
     now = datetime.now(timezone.utc)
-    timeline_ref = req_ref.collection("timeline").document()
-    timeline_data = {
-        "status": status,
-        "timestamp": now.isoformat()
-    }
-    if note:
-        timeline_data["note"] = note
-    timeline_ref.set(timeline_data)
     
+    if db:
+        req_ref = db.collection("requests").document(id)
+        doc = req_ref.get()
+        if not doc.exists:
+            raise HTTPException(status_code=404, detail="Request not found")
+            
+        req_ref.update({"status": status})
+        
+        timeline_ref = req_ref.collection("timeline").document()
+        timeline_data = {
+            "status": status,
+            "timestamp": now.isoformat()
+        }
+        if note:
+            timeline_data["note"] = note
+        timeline_ref.set(timeline_data)
+    else:
+        if id not in MOCK_DB["requests"]:
+            raise HTTPException(status_code=404, detail="Request not found")
+            
+        MOCK_DB["requests"][id]["status"] = status
+        timeline_data = {
+            "status": status,
+            "timestamp": now.isoformat()
+        }
+        if note:
+            timeline_data["note"] = note
+            
+        if id not in MOCK_DB["timelines"]:
+            MOCK_DB["timelines"][id] = []
+        MOCK_DB["timelines"][id].append(timeline_data)
+        
     return {"message": "Status updated successfully"}
 

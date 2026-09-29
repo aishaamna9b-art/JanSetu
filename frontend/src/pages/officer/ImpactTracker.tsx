@@ -1,109 +1,168 @@
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { useQuery } from '@tanstack/react-query';
+import { fetchWithAuth } from '../../lib/api';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, LineChart, Line, Cell } from 'recharts';
+import { AlertTriangle, BrainCircuit, Activity } from 'lucide-react';
+import { motion } from 'framer-motion';
 
-const MOCK_DATA = [
-  { district: 'Lucknow', raised: 4500, resolved: 3200, rate: 71 },
-  { district: 'Kanpur', raised: 3800, resolved: 2100, rate: 55 },
-  { district: 'Varanasi', raised: 2900, resolved: 2400, rate: 82 },
-  { district: 'Agra', raised: 1800, resolved: 1100, rate: 61 },
-  { district: 'Patna', raised: 3100, resolved: 1900, rate: 61 },
-];
+interface ImpactData {
+  district: string;
+  raised: number;
+  resolved: number;
+  resolution_rate: number;
+}
 
 export default function ImpactTracker() {
+  const { data, isLoading, error } = useQuery<ImpactData[]>({
+    queryKey: ['impact'],
+    queryFn: () => fetchWithAuth('/impact')
+  });
+
+  const chartData = (data || []).map(d => ({
+    ...d,
+    rate: Math.round(d.resolution_rate * 100)
+  }));
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-[60vh]">
+        <div className="relative w-24 h-24">
+          <div className="absolute inset-0 rounded-full border-4 border-[#1B1F3B]/10 dark:border-white/10"></div>
+          <div className="absolute inset-0 rounded-full border-4 border-t-[#1E7B4F] animate-spin"></div>
+          <Activity className="absolute inset-0 m-auto text-[#1E7B4F] animate-pulse" size={32} />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-[#C8553D]/10 text-[#C8553D] p-4 rounded-xl flex items-start gap-3 max-w-6xl mx-auto mt-8 border border-[#C8553D]/20">
+        <AlertTriangle className="mt-0.5 shrink-0" />
+        <div>
+          <h3 className="font-bold font-serif">Failed to load impact data</h3>
+          <p className="text-sm mt-1">{(error as Error).message}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0 }
+  };
+
   return (
-    <div className="p-8 max-w-6xl mx-auto">
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold mb-2">Impact Tracker</h2>
-        <p className="text-gray-600 dark:text-gray-400">
+    <motion.div 
+      initial="hidden" animate="show" variants={containerVariants}
+      className="p-4 md:p-8 max-w-7xl mx-auto space-y-8"
+    >
+      <motion.div variants={itemVariants}>
+        <h1 className="text-3xl font-bold text-[#1B1F3B] dark:text-white font-serif flex items-center gap-3">
+          <Activity className="text-[#1E7B4F]" />
+          Impact Tracker
+        </h1>
+        <p className="text-[#1B1F3B]/60 dark:text-white/60 mt-1 font-medium">
           Monitor request resolution rates across districts to evaluate operational efficiency.
         </p>
-      </div>
+      </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-bold mb-6">Raised vs Resolved by District</h3>
-          <div className="h-80">
+        <motion.div variants={itemVariants} className="bg-[#FBF6EC] dark:bg-[#0E1226] rounded-2xl shadow-sm border border-[#1B1F3B]/10 dark:border-white/10 p-6 relative overflow-hidden">
+          <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(#1B1F3B 1px, transparent 1px)', backgroundSize: '10px 10px' }}></div>
+          <h3 className="text-lg font-bold mb-6 text-[#1B1F3B] dark:text-white font-serif relative z-10">Raised vs Resolved</h3>
+          <div className="h-80 relative z-10">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={MOCK_DATA}
-                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
-                <XAxis dataKey="district" stroke="#9ca3af" />
-                <YAxis stroke="#9ca3af" />
+              <BarChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-[#1B1F3B]/10 dark:text-white/10" vertical={false} />
+                <XAxis dataKey="district" stroke="#F28C28" tick={{fill: '#F28C28', opacity: 1, fontSize: 12}} className="font-mono" tickLine={false} axisLine={false} />
+                <YAxis stroke="#F28C28" tick={{fill: '#F28C28', opacity: 1, fontSize: 12}} className="font-mono" tickLine={false} axisLine={false} />
                 <RechartsTooltip 
-                  contentStyle={{ backgroundColor: '#1f2937', borderColor: '#374151', color: '#f3f4f6' }}
-                  itemStyle={{ color: '#e5e7eb' }}
+                  cursor={{ fill: 'rgba(27, 31, 59, 0.05)' }}
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', backgroundColor: 'var(--color-primary-50)', color: 'var(--color-ink)' }}
                 />
-                <Legend />
-                <Bar dataKey="raised" name="Total Raised" fill="#94a3b8" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="resolved" name="Resolved" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', fontWeight: 'bold' }} />
+                <Bar dataKey="resolved" stackId="a" name="Resolved" fill="#1E7B4F" radius={[0, 0, 0, 0]} barSize={30} />
+                <Bar dataKey="raised" stackId="a" name="Raised (Pending)" fill="#1B1F3B" radius={[4, 4, 0, 0]} barSize={30} />
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-bold mb-6">Resolution Rate (%)</h3>
-          <div className="h-80">
+        <motion.div variants={itemVariants} className="bg-[#FBF6EC] dark:bg-[#0E1226] rounded-2xl shadow-sm border border-[#1B1F3B]/10 dark:border-white/10 p-6 relative overflow-hidden">
+          <h3 className="text-lg font-bold mb-6 text-[#1B1F3B] dark:text-white font-serif relative z-10">Resolution Velocity</h3>
+          <div className="h-80 relative z-10">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={MOCK_DATA}
-                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
-                <XAxis dataKey="district" stroke="#9ca3af" />
-                <YAxis stroke="#9ca3af" domain={[0, 100]} />
+              <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-[#1B1F3B]/10 dark:text-white/10" vertical={false} />
+                <XAxis dataKey="district" stroke="#F28C28" tick={{fill: '#F28C28', opacity: 1, fontSize: 12}} className="font-mono" tickLine={false} axisLine={false} />
+                <YAxis stroke="#F28C28" tick={{fill: '#F28C28', opacity: 1, fontSize: 12}} className="font-mono" domain={[0, 100]} tickLine={false} axisLine={false} />
                 <RechartsTooltip 
-                  contentStyle={{ backgroundColor: '#1f2937', borderColor: '#374151', color: '#f3f4f6' }}
-                  itemStyle={{ color: '#e5e7eb' }}
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', backgroundColor: 'var(--color-primary-50)', color: 'var(--color-ink)' }}
                 />
-                <Legend />
-                <Line type="monotone" dataKey="rate" name="Resolution Rate %" stroke="#10b981" strokeWidth={3} dot={{ r: 6 }} activeDot={{ r: 8 }} />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', fontWeight: 'bold' }} />
+                <Line type="monotone" dataKey="rate" name="Resolution Rate %" stroke="#F28C28" strokeWidth={4} dot={{ r: 6, fill: '#F28C28', strokeWidth: 0 }} activeDot={{ r: 8 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </motion.div>
       </div>
       
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-        <div className="p-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-          <h3 className="font-bold text-gray-900 dark:text-gray-100">Performance Matrix</h3>
+      <motion.div variants={itemVariants} className="bg-white dark:bg-[#1B1F3B]/30 rounded-2xl shadow-sm border border-[#1B1F3B]/10 dark:border-white/10 overflow-hidden">
+        <div className="p-5 border-b border-[#1B1F3B]/10 dark:border-white/10 bg-[#FBF6EC] dark:bg-[#0E1226] flex items-center justify-between">
+          <h3 className="font-bold text-[#1B1F3B] dark:text-white font-serif">Performance Matrix</h3>
+          <BrainCircuit className="text-[#1B1F3B]/20 dark:text-white/20" />
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-gray-200 dark:border-gray-700">
-                <th className="p-4 font-medium text-sm text-gray-500 dark:text-gray-400">District</th>
-                <th className="p-4 font-medium text-sm text-gray-500 dark:text-gray-400">Issues Raised</th>
-                <th className="p-4 font-medium text-sm text-gray-500 dark:text-gray-400">Issues Resolved</th>
-                <th className="p-4 font-medium text-sm text-gray-500 dark:text-gray-400">Resolution Rate</th>
-                <th className="p-4 font-medium text-sm text-gray-500 dark:text-gray-400">Status</th>
+              <tr className="border-b border-[#1B1F3B]/10 dark:border-white/10 bg-white dark:bg-transparent">
+                <th className="p-4 font-bold text-[10px] uppercase tracking-widest text-[#1B1F3B]/50 dark:text-white/50">District</th>
+                <th className="p-4 font-bold text-[10px] uppercase tracking-widest text-[#1B1F3B]/50 dark:text-white/50">Issues Raised</th>
+                <th className="p-4 font-bold text-[10px] uppercase tracking-widest text-[#1B1F3B]/50 dark:text-white/50">Issues Resolved</th>
+                <th className="p-4 font-bold text-[10px] uppercase tracking-widest text-[#1B1F3B]/50 dark:text-white/50">Resolution Rate</th>
+                <th className="p-4 font-bold text-[10px] uppercase tracking-widest text-[#1B1F3B]/50 dark:text-white/50">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-              {MOCK_DATA.sort((a, b) => b.rate - a.rate).map((data) => (
-                <tr key={data.district} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                  <td className="p-4 font-medium">{data.district}</td>
-                  <td className="p-4">{data.raised.toLocaleString()}</td>
-                  <td className="p-4">{data.resolved.toLocaleString()}</td>
+            <tbody className="divide-y divide-[#1B1F3B]/5 dark:divide-white/5">
+              {[...chartData].sort((a, b) => b.rate - a.rate).map((data, index) => (
+                <tr key={data.district} className="hover:bg-[#1B1F3B]/5 dark:hover:bg-white/5 transition-colors group">
+                  <td className="p-4 font-bold text-[#1B1F3B] dark:text-white flex items-center gap-2">
+                    {index === 0 && <span className="text-xl" title="1st Place">🥇</span>}
+                    {index === 1 && <span className="text-xl" title="2nd Place">🥈</span>}
+                    {index === 2 && <span className="text-xl" title="3rd Place">🥉</span>}
+                    {index > 2 && <span className="w-5 inline-block text-center text-[#1B1F3B]/30 dark:text-white/30 font-mono text-sm">{index + 1}</span>}
+                    {data.district}
+                  </td>
+                  <td className="p-4 font-mono text-[#1B1F3B]/70 dark:text-white/70">{data.raised.toLocaleString()}</td>
+                  <td className="p-4 font-mono text-[#1B1F3B]/70 dark:text-white/70">{data.resolved.toLocaleString()}</td>
                   <td className="p-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-24 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                        <div 
-                          className={`h-full rounded-full ${data.rate >= 70 ? 'bg-green-500' : data.rate >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
-                          style={{ width: `${data.rate}%` }}
+                    <div className="flex items-center gap-3">
+                      <div className="w-24 h-2 bg-[#1B1F3B]/10 dark:bg-white/10 rounded-full overflow-hidden">
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${data.rate}%` }}
+                          transition={{ duration: 1.5, type: 'spring' }}
+                          className={`h-full rounded-full ${data.rate >= 70 ? 'bg-[#1E7B4F]' : data.rate >= 50 ? 'bg-[#E9B44C]' : 'bg-[#C8553D]'}`}
                         />
                       </div>
-                      <span className="text-sm font-medium">{data.rate}%</span>
+                      <span className="font-mono font-bold text-sm text-[#1B1F3B] dark:text-white">{data.rate}%</span>
                     </div>
                   </td>
                   <td className="p-4">
                     {data.rate >= 70 ? (
-                      <span className="text-green-600 dark:text-green-400 text-sm font-medium">On Track</span>
-                    ) : data.rate >= 60 ? (
-                      <span className="text-yellow-600 dark:text-yellow-400 text-sm font-medium">Needs Attention</span>
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-[#1E7B4F]/10 text-[#1E7B4F] uppercase tracking-wider">On Track</span>
+                    ) : data.rate >= 50 ? (
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-[#E9B44C]/10 text-[#E9B44C] uppercase tracking-wider">Needs Attention</span>
                     ) : (
-                      <span className="text-red-600 dark:text-red-400 text-sm font-medium">Critical</span>
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-[#C8553D]/10 text-[#C8553D] uppercase tracking-wider">Critical</span>
                     )}
                   </td>
                 </tr>
@@ -111,7 +170,7 @@ export default function ImpactTracker() {
             </tbody>
           </table>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
