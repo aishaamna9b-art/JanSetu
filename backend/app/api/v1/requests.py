@@ -12,6 +12,7 @@ from app.services.tts import generate_tts_url
 from app.services.storage import upload_file_to_storage
 from app.services.embeddings import generate_embedding
 from app.services.clustering import assign_to_cluster
+from app.services.gemini_vision import analyze_photo
 from app.config import settings
 
 router = APIRouter()
@@ -36,7 +37,12 @@ async def create_request(
         audio_bytes = await audio.read()
         original_text = transcribe_audio(audio_bytes, language_code=language)
         
+    photo_bytes = None
+    photo_mime_type = None
     if photo:
+        photo_bytes = await photo.read()
+        photo_mime_type = photo.content_type
+        await photo.seek(0)
         upload_file_to_storage(photo, folder="photos")
         
     if not original_text:
@@ -50,6 +56,14 @@ async def create_request(
     req_id = f"req-{uuid.uuid4().hex[:12]}"
     
     embedding = generate_embedding(translated_text)
+    photo_analysis = None
+    photo_severity = 0.0
+    if photo_bytes and photo_mime_type:
+        photo_analysis_result = analyze_photo(photo_bytes, photo_mime_type, extraction.category)
+        if photo_analysis_result:
+            photo_analysis = photo_analysis_result.model_dump()
+            photo_severity = float(photo_analysis_result.severity)
+            
     request_temp_data = {
         "location": {
             "lat": lat, "lng": lng,
@@ -58,11 +72,10 @@ async def create_request(
         },
         "category": extraction.category,
         "urgency": extraction.urgency,
-        "original_text": original_text
+        "original_text": original_text,
+        "photo_severity": photo_severity
     }
     cluster_id = assign_to_cluster(embedding, request_temp_data)
-    
-    photo_analysis = None
     
     if language != "en" and not settings.DEV_MODE:
         from google.cloud import translate_v2 as translate
@@ -95,6 +108,7 @@ async def create_request(
             "hint": extraction.location_hint
         },
         "vulnerable_group": extraction.vulnerable_group,
+        "photo_analysis": photo_analysis,
         "cluster_id": cluster_id,
         "created_at": now.isoformat()
     }
