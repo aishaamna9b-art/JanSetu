@@ -40,8 +40,22 @@ def test_recommendations():
     else:
         print("Recommendations fetch failed:", response.status_code, response.text)
 
+def test_gap_analysis():
+    response = client.get(
+        "/api/v1/analytics/gaps",
+        headers={"Authorization": "Bearer dev-officer-token"}
+    )
+    if response.status_code == 200:
+        data = response.json()
+        print("Gap analysis fetched successfully:", len(data), "items")
+        if len(data) > 0:
+            print("Top gap:", data[0])
+    else:
+        print("Gap analysis fetch failed:", response.status_code, response.text)
+
 if __name__ == "__main__":
     test_health()
     test_create_request_text()
     test_recommendations()
+    test_gap_analysis()
     print("All tests completed.")
