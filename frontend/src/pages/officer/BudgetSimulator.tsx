@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { fetchWithAuth } from '../../lib/api';
 import { MapPin, Calculator, Play, DollarSign, Users, CheckCircle, BrainCircuit, Activity } from 'lucide-react';
@@ -39,10 +39,10 @@ export default function BudgetSimulator() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['water', 'roads']);
   
   // To handle smooth animations on result update
-  const [prevSummary, setPrevSummary] = useState<SimulatorResponse['data']['summary'] | null>(null);
+  // const [prevSummary, setPrevSummary] = useState<SimulatorResponse['data']['summary'] | null>(null);
   
   const mutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (): Promise<SimulatorResponse> => {
       return fetchWithAuth('/simulator/run', {
         method: 'POST',
         body: JSON.stringify({
@@ -59,10 +59,10 @@ export default function BudgetSimulator() {
         })
       });
     },
-    onSuccess: (data: SimulatorResponse) => {
+    onSuccess: () => {
       // Keep track of previous for animation purposes
       if (mutation.data?.data?.summary) {
-         setPrevSummary(mutation.data.data.summary);
+         // setPrevSummary(mutation.data.data.summary);
       }
     }
   });
@@ -246,7 +246,7 @@ export default function BudgetSimulator() {
               <div>
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Selected Projects</h3>
                 <div className="space-y-4">
-                  {data.selected_projects.map((project, idx) => (
+                  {data.selected_projects.map((project: any, idx: number) => (
                     <div 
                       key={project.cluster_id} 
                       className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col sm:flex-row gap-5 items-start sm:items-center hover:shadow-md transition-shadow"
