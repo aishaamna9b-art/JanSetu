@@ -23,9 +23,9 @@ async def create_request(
     current_user: dict = Depends(require_role(["citizen"]))
 ):
     original_text = text or "No text provided"
-    translated_text = original_text # Will integrate translation in Phase 4
     
-    extraction = extract_request_details(translated_text)
+    extraction = extract_request_details(original_text)
+    translated_text = extraction.translated_text or original_text
     
     tracking_id = f"TRK-{uuid.uuid4().hex[:8].upper()}"
     req_id = f"req-{uuid.uuid4().hex[:12]}"

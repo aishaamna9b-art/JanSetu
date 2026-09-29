@@ -53,6 +53,7 @@ class GeminiExtractionResult(BaseModel):
     sentiment: str
     vulnerable_group: bool
     location_hint: Optional[str] = None
+    translated_text: Optional[str] = None
 
 class TopCategory(BaseModel):
     category: str

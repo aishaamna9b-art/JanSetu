@@ -4,9 +4,10 @@ from pydantic import ValidationError
 from app.models.schemas import GeminiExtractionResult
 from app.models.enums import Category
 
+from app.config import settings
+
 def get_gemini_client():
-    # Automatically picks up GEMINI_API_KEY from environment
-    return genai.Client()
+    return genai.Client(api_key=settings.GEMINI_API_KEY)
 
 def extract_request_details(text: str) -> GeminiExtractionResult:
     if not text:
@@ -16,7 +17,8 @@ def extract_request_details(text: str) -> GeminiExtractionResult:
             urgency=1,
             sentiment="neutral",
             vulnerable_group=False,
-            location_hint=None
+            location_hint=None,
+            translated_text=None
         )
         
     client = get_gemini_client()
@@ -34,7 +36,8 @@ def extract_request_details(text: str) -> GeminiExtractionResult:
         "urgency": "integer (1 to 5, where 5 is critical/life-threatening)",
         "sentiment": "string (e.g. frustrated, neutral, urgent, angry)",
         "vulnerable_group": "boolean (true if it mentions elderly, children, disabled, or poor)",
-        "location_hint": "string (any extracted location names or landmarks, or null)"
+        "location_hint": "string (any extracted location names or landmarks, or null)",
+        "translated_text": "string (the english translation of the request text. if already in english, return it as is)"
     }}
     
     Request Text:
@@ -43,7 +46,7 @@ def extract_request_details(text: str) -> GeminiExtractionResult:
     
     try:
         response = client.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-3.8-flash',
             contents=prompt,
         )
         
@@ -71,5 +74,6 @@ def extract_request_details(text: str) -> GeminiExtractionResult:
             urgency=3,
             sentiment="unknown",
             vulnerable_group=False,
-            location_hint=None
+            location_hint=None,
+            translated_text=None
         )
