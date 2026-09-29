@@ -34,7 +34,7 @@ export async function handleMockRequest(endpoint: string, options: RequestInit) 
     };
   }
 
-  if (endpoint === '/requests/mine' && options.method === 'GET') {
+  if (endpoint === '/requests/mine' && (options.method === 'GET' || !options.method)) {
     return [
       {
         id: "req-123",
@@ -55,7 +55,7 @@ export async function handleMockRequest(endpoint: string, options: RequestInit) 
     ];
   }
 
-  if (endpoint.startsWith('/requests/') && options.method === 'GET') {
+  if (endpoint.startsWith('/requests/') && (options.method === 'GET' || !options.method)) {
     const parts = endpoint.split('/');
     const tracking_id = parts[parts.length - 1];
     
@@ -70,6 +70,38 @@ export async function handleMockRequest(endpoint: string, options: RequestInit) 
         { status: "received", timestamp: new Date(Date.now() - 172800000).toISOString() },
         { status: "verified", timestamp: new Date(Date.now() - 86400000).toISOString() },
         { status: "under_review", timestamp: new Date().toISOString() }
+      ]
+    };
+  }
+
+  if (endpoint.startsWith('/dashboard/overview') && (options.method === 'GET' || !options.method)) {
+    return {
+      kpis: {
+        total_requests: 15420,
+        resolved_requests: 8230,
+        avg_resolution_days: 4.5,
+        total_spending: 24000000
+      },
+      top_categories: [
+        { name: "Water", count: 4500 },
+        { name: "Roads", count: 3200 },
+        { name: "Electricity", count: 2800 },
+        { name: "Sanitation", count: 2100 },
+        { name: "Healthcare", count: 1500 }
+      ],
+      trend: [
+        { date: "Jan", raised: 1200, resolved: 800 },
+        { date: "Feb", raised: 1300, resolved: 900 },
+        { date: "Mar", raised: 1100, resolved: 1000 },
+        { date: "Apr", raised: 1500, resolved: 1200 },
+        { date: "May", raised: 1800, resolved: 1300 },
+        { date: "Jun", raised: 1600, resolved: 1500 }
+      ],
+      status_distribution: [
+        { name: "Received", value: 3000 },
+        { name: "Verified", value: 2500 },
+        { name: "Under Review", value: 1690 },
+        { name: "Funded", value: 1200 }
       ]
     };
   }

@@ -11,7 +11,11 @@ import Confirmation from './pages/citizen/Confirmation';
 import MyRequests from './pages/citizen/MyRequests';
 import TrackRequest from './pages/citizen/TrackRequest';
 
-// Officer (placeholders for phase 1/2)
+// Officer
+import OfficerLayout from './components/OfficerLayout';
+import Overview from './pages/officer/Overview';
+
+// Admin (placeholders for phase 1/2)
 const Placeholder = ({ title }: { title: string }) => <div className="p-8">{title} - Coming soon</div>;
 
 export const router = createBrowserRouter([
@@ -43,7 +47,18 @@ export const router = createBrowserRouter([
     path: '/officer',
     element: <ProtectedRoute allowedRoles={['officer']} />,
     children: [
-      { index: true, element: <Placeholder title="Officer Overview" /> }
+      {
+        element: <OfficerLayout />,
+        children: [
+          { index: true, element: <Overview /> },
+          { path: 'hotspots', element: <Placeholder title="Hotspot Map" /> },
+          { path: 'gaps', element: <Placeholder title="Gap Analysis" /> },
+          { path: 'recommendations', element: <Placeholder title="Recommendations" /> },
+          { path: 'simulator', element: <Placeholder title="Budget Simulator" /> },
+          { path: 'policy', element: <Placeholder title="Policy Brief" /> },
+          { path: 'impact', element: <Placeholder title="Impact Tracker" /> },
+        ]
+      }
     ],
   },
   {
