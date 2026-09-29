@@ -10,6 +10,8 @@ from app.services.speech import transcribe_audio
 from app.services.translation import translate_to_english
 from app.services.tts import generate_tts_url
 from app.services.storage import upload_file_to_storage
+from app.services.embeddings import generate_embedding
+from app.services.clustering import assign_to_cluster
 from app.config import settings
 
 router = APIRouter()
@@ -47,7 +49,19 @@ async def create_request(
     tracking_id = f"TRK-{uuid.uuid4().hex[:8].upper()}"
     req_id = f"req-{uuid.uuid4().hex[:12]}"
     
-    cluster_id = None
+    embedding = generate_embedding(translated_text)
+    request_temp_data = {
+        "location": {
+            "lat": lat, "lng": lng,
+            "state": state, "district": district, "block": block,
+            "hint": extraction.location_hint
+        },
+        "category": extraction.category,
+        "urgency": extraction.urgency,
+        "original_text": original_text
+    }
+    cluster_id = assign_to_cluster(embedding, request_temp_data)
+    
     photo_analysis = None
     
     if language != "en" and not settings.DEV_MODE:
