@@ -30,6 +30,16 @@ export async function fetchWithAuth(endpoint: string, options: RequestInit = {})
     headers.set('Content-Type', 'application/json');
   }
 
+  if (!navigator.onLine) {
+    if (options.method && options.method !== 'GET') {
+      console.log(`[OFFLINE] Queuing request to ${endpoint}`);
+      const { enqueueRequest } = await import('./offlineQueue');
+      await enqueueRequest(endpoint, options);
+      return { success: true, _queued: true, message: 'Request queued for when online' };
+    }
+    throw new Error('You are offline. Cannot fetch data.');
+  }
+
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers,
