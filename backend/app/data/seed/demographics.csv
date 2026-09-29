@@ -1,0 +1,13 @@
+state,district,block,population,vulnerable_pop
+Delhi,North West Delhi,Rohini,181909,5824
+Delhi,North West Delhi,Pitampura,95586,25428
+Delhi,North West Delhi,Shalimar Bagh,52682,18800
+Delhi,South Delhi,Saket,152906,13448
+Delhi,South Delhi,Hauz Khas,174234,6892
+Delhi,South Delhi,Vasant Kunj,115481,21315
+Maharashtra,Mumbai Suburban,Andheri,190392,26699
+Maharashtra,Mumbai Suburban,Bandra,99628,15528
+Maharashtra,Mumbai Suburban,Borivali,99390,25798
+Maharashtra,Pune,Kothrud,199995,5192
+Maharashtra,Pune,Shivajinagar,114598,13214
+Maharashtra,Pune,Hadapsar,176883,11376

@@ -1,0 +1,121 @@
+district,block,category,infra_index
+North West Delhi,Rohini,water,0.16
+North West Delhi,Rohini,roads,0.53
+North West Delhi,Rohini,electricity,0.54
+North West Delhi,Rohini,health,0.7
+North West Delhi,Rohini,education,0.27
+North West Delhi,Rohini,sanitation,0.47
+North West Delhi,Rohini,housing,0.44
+North West Delhi,Rohini,agriculture,0.19
+North West Delhi,Rohini,transport,0.87
+North West Delhi,Rohini,other,0.34
+North West Delhi,Pitampura,water,0.42
+North West Delhi,Pitampura,roads,0.4
+North West Delhi,Pitampura,electricity,0.14
+North West Delhi,Pitampura,health,0.46
+North West Delhi,Pitampura,education,0.11
+North West Delhi,Pitampura,sanitation,0.25
+North West Delhi,Pitampura,housing,0.59
+North West Delhi,Pitampura,agriculture,0.7
+North West Delhi,Pitampura,transport,0.83
+North West Delhi,Pitampura,other,0.79
+North West Delhi,Shalimar Bagh,water,0.71
+North West Delhi,Shalimar Bagh,roads,0.87
+North West Delhi,Shalimar Bagh,electricity,0.27
+North West Delhi,Shalimar Bagh,health,0.27
+North West Delhi,Shalimar Bagh,education,0.82
+North West Delhi,Shalimar Bagh,sanitation,0.55
+North West Delhi,Shalimar Bagh,housing,0.66
+North West Delhi,Shalimar Bagh,agriculture,0.26
+North West Delhi,Shalimar Bagh,transport,0.23
+North West Delhi,Shalimar Bagh,other,0.33
+South Delhi,Saket,water,0.38
+South Delhi,Saket,roads,0.74
+South Delhi,Saket,electricity,0.14
+South Delhi,Saket,health,0.81
+South Delhi,Saket,education,0.18
+South Delhi,Saket,sanitation,0.47
+South Delhi,Saket,housing,0.33
+South Delhi,Saket,agriculture,0.76
+South Delhi,Saket,transport,0.4
+South Delhi,Saket,other,0.61
+South Delhi,Hauz Khas,water,0.89
+South Delhi,Hauz Khas,roads,0.2
+South Delhi,Hauz Khas,electricity,0.11
+South Delhi,Hauz Khas,health,0.44
+South Delhi,Hauz Khas,education,0.29
+South Delhi,Hauz Khas,sanitation,0.39
+South Delhi,Hauz Khas,housing,0.81
+South Delhi,Hauz Khas,agriculture,0.79
+South Delhi,Hauz Khas,transport,0.2
+South Delhi,Hauz Khas,other,0.74
+South Delhi,Vasant Kunj,water,0.76
+South Delhi,Vasant Kunj,roads,0.47
+South Delhi,Vasant Kunj,electricity,0.14
+South Delhi,Vasant Kunj,health,0.46
+South Delhi,Vasant Kunj,education,0.63
+South Delhi,Vasant Kunj,sanitation,0.55
+South Delhi,Vasant Kunj,housing,0.58
+South Delhi,Vasant Kunj,agriculture,0.47
+South Delhi,Vasant Kunj,transport,0.33
+South Delhi,Vasant Kunj,other,0.46
+Mumbai Suburban,Andheri,water,0.77
+Mumbai Suburban,Andheri,roads,0.81
+Mumbai Suburban,Andheri,electricity,0.67
+Mumbai Suburban,Andheri,health,0.54
+Mumbai Suburban,Andheri,education,0.36
+Mumbai Suburban,Andheri,sanitation,0.54
+Mumbai Suburban,Andheri,housing,0.15
+Mumbai Suburban,Andheri,agriculture,0.47
+Mumbai Suburban,Andheri,transport,0.36
+Mumbai Suburban,Andheri,other,0.86
+Mumbai Suburban,Bandra,water,0.88
+Mumbai Suburban,Bandra,roads,0.53
+Mumbai Suburban,Bandra,electricity,0.24
+Mumbai Suburban,Bandra,health,0.24
+Mumbai Suburban,Bandra,education,0.63
+Mumbai Suburban,Bandra,sanitation,0.17
+Mumbai Suburban,Bandra,housing,0.41
+Mumbai Suburban,Bandra,agriculture,0.16
+Mumbai Suburban,Bandra,transport,0.5
+Mumbai Suburban,Bandra,other,0.58
+Mumbai Suburban,Borivali,water,0.58
+Mumbai Suburban,Borivali,roads,0.53
+Mumbai Suburban,Borivali,electricity,0.88
+Mumbai Suburban,Borivali,health,0.35
+Mumbai Suburban,Borivali,education,0.71
+Mumbai Suburban,Borivali,sanitation,0.76
+Mumbai Suburban,Borivali,housing,0.81
+Mumbai Suburban,Borivali,agriculture,0.57
+Mumbai Suburban,Borivali,transport,0.62
+Mumbai Suburban,Borivali,other,0.7
+Pune,Kothrud,water,0.52
+Pune,Kothrud,roads,0.43
+Pune,Kothrud,electricity,0.38
+Pune,Kothrud,health,0.8
+Pune,Kothrud,education,0.46
+Pune,Kothrud,sanitation,0.45
+Pune,Kothrud,housing,0.24
+Pune,Kothrud,agriculture,0.64
+Pune,Kothrud,transport,0.53
+Pune,Kothrud,other,0.39
+Pune,Shivajinagar,water,0.59
+Pune,Shivajinagar,roads,0.35
+Pune,Shivajinagar,electricity,0.32
+Pune,Shivajinagar,health,0.64
+Pune,Shivajinagar,education,0.65
+Pune,Shivajinagar,sanitation,0.27
+Pune,Shivajinagar,housing,0.41
+Pune,Shivajinagar,agriculture,0.36
+Pune,Shivajinagar,transport,0.17
+Pune,Shivajinagar,other,0.37
+Pune,Hadapsar,water,0.74
+Pune,Hadapsar,roads,0.22
+Pune,Hadapsar,electricity,0.85
+Pune,Hadapsar,health,0.27
+Pune,Hadapsar,education,0.16
+Pune,Hadapsar,sanitation,0.49
+Pune,Hadapsar,housing,0.87
+Pune,Hadapsar,agriculture,0.3
+Pune,Hadapsar,transport,0.39
+Pune,Hadapsar,other,0.24
