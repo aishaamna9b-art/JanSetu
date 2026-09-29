@@ -16,6 +16,8 @@ import OfficerLayout from './components/OfficerLayout';
 import Overview from './pages/officer/Overview';
 import Recommendations from './pages/officer/Recommendations';
 
+import GapAnalysis from './pages/officer/GapAnalysis';
+
 // Admin (placeholders for phase 1/2)
 const Placeholder = ({ title }: { title: string }) => <div className="p-8">{title} - Coming soon</div>;
 
@@ -53,7 +55,7 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <Overview /> },
           { path: 'hotspots', element: <Placeholder title="Hotspot Map" /> },
-          { path: 'gaps', element: <Placeholder title="Gap Analysis" /> },
+          { path: 'gaps', element: <GapAnalysis /> },
           { path: 'recommendations', element: <Recommendations /> },
           { path: 'simulator', element: <Placeholder title="Budget Simulator" /> },
           { path: 'policy', element: <Placeholder title="Policy Brief" /> },
