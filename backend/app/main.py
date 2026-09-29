@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.api.v1 import auth, requests, analytics, recommendations
+from app.api.v1 import auth, requests, analytics, recommendations, simulator
 from app.core.errors import AppError, app_error_handler
 from app.core.firebase import init_firebase
 
@@ -26,6 +26,7 @@ app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["aut
 app.include_router(requests.router, prefix=f"{settings.API_V1_STR}/requests", tags=["requests"])
 app.include_router(analytics.router, prefix=f"{settings.API_V1_STR}/analytics", tags=["analytics"])
 app.include_router(recommendations.router, prefix=f"{settings.API_V1_STR}/recommendations", tags=["recommendations"])
+app.include_router(simulator.router, prefix=f"{settings.API_V1_STR}/simulator", tags=["simulator"])
 
 @app.get("/health")
 def health_check():
