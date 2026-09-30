@@ -68,11 +68,25 @@ const TrackRequest: React.FC = () => {
         </div>
 
         {((request.request_details?.original_text || request.original_text) && 
-          <div className="bg-primary-50 p-5 rounded-2xl border border-primary-200 relative">
+          <div className="bg-primary-50 p-5 rounded-2xl border border-primary-200 relative mb-6">
             <div className="absolute -left-2 top-6 w-1 h-12 bg-primary-500 rounded-r-full"></div>
             <p className="text-xs font-bold text-primary-900/60 uppercase tracking-wider mb-2">Original Request</p>
             <p className="text-ink font-serif text-lg leading-relaxed italic">"{request.request_details?.original_text || request.original_text}"</p>
           </div>
+        )}
+
+        {(request.request_details?.photo_url || request.photo_url) && (
+          (request.request_details?.photo_analysis?.matches_request ?? request.photo_analysis?.matches_request) !== false ? (
+            <div className="bg-primary-50 p-5 rounded-2xl border border-primary-200 relative">
+              <p className="text-xs font-bold text-primary-900/60 uppercase tracking-wider mb-2">Attached Photo</p>
+              <img src={request.request_details?.photo_url || request.photo_url} alt="User reported issue" className="w-full rounded-xl object-cover" />
+            </div>
+          ) : (
+            <div className="bg-red-50 p-5 rounded-2xl border border-red-200 relative">
+              <p className="text-xs font-bold text-red-900/60 uppercase tracking-wider mb-2">Photo Excluded</p>
+              <p className="text-red-700 font-sans text-sm">Your attached photo was flagged as unrelated to the reported category and has been excluded from this request.</p>
+            </div>
+          )
         )}
       </motion.div>
 

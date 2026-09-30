@@ -104,6 +104,12 @@ const Confirmation: React.FC = () => {
           <p className="text-ink/70 mb-6 font-sans">
             {data?.confirmation_message || "We are routing this to the correct department."}
           </p>
+          
+          {data?.photo_analysis && !data.photo_analysis.matches_request && (
+            <div className="mb-6 p-4 bg-red-50 text-red-700 border border-red-200 rounded-xl text-sm w-full text-left">
+              <strong>Notice:</strong> Your photo was flagged as unrelated to the reported category and will not be displayed on your request.
+            </div>
+          )}
 
           {data && (
             <div className="flex justify-center space-x-3 mb-6">
@@ -117,10 +123,12 @@ const Confirmation: React.FC = () => {
           )}
 
           {data?.confirmation_audio_url && (
-            <button 
-              onClick={toggleAudio}
-              className="w-full flex items-center justify-center space-x-3 bg-primary-50 py-4 px-6 rounded-2xl hover:bg-primary-100 transition-colors border border-primary-200"
-            >
+            <div className="w-full flex flex-col items-center">
+              <p className="text-xs text-ink/60 font-bold uppercase tracking-wider mb-2">Listen to Confirmation Message</p>
+              <button 
+                onClick={toggleAudio}
+                className="w-full flex items-center justify-center space-x-3 bg-primary-50 py-4 px-6 rounded-2xl hover:bg-primary-100 transition-colors border border-primary-200"
+              >
               <div className={`p-2 rounded-full ${isPlaying ? 'bg-accent-500 text-white' : 'bg-primary-600 text-white'}`}>
                 {isPlaying ? <Square size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" className="ml-0.5" />}
               </div>
@@ -137,6 +145,7 @@ const Confirmation: React.FC = () => {
                 ))}
               </div>
             </button>
+            </div>
           )}
         </div>
 

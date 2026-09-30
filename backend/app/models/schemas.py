@@ -39,6 +39,7 @@ class RequestResponse(BaseModel):
     original_text: str
     confirmation_message: str
     confirmation_audio_url: Optional[str] = None
+    photo_url: Optional[str] = None
     photo_analysis: Optional[PhotoAnalysisSchema] = None
     cluster_id: Optional[str] = None
     status: str

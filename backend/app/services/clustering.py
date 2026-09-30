@@ -34,24 +34,26 @@ def assign_to_cluster(
     category = request_data.get("category", "")
     urgency = request_data.get("urgency", 3)
     
-    # In a real scalable app, we'd use pgvector or Vector Search.
-    # Here, we fetch clusters for this district+category and do brute-force cosine similarity.
-    clusters_ref = db.collection("clusters")
-    query = clusters_ref.where("district", "==", district).where("category", "==", category)
-    
-    best_cluster_id = None
-    best_sim = -1.0
-    best_cluster_data = None
-    
-    for doc in query.stream():
-        c_data = doc.to_dict()
-        c_emb = c_data.get("centroid_embedding")
-        if c_emb:
-            sim = cosine_similarity(embedding, c_emb)
-            if sim > best_sim:
-                best_sim = sim
-                best_cluster_id = doc.id
-                best_cluster_data = c_data
+    try:
+        clusters_ref = db.collection("clusters")
+        query = clusters_ref.where("district", "==", district).where("category", "==", category)
+        
+        best_cluster_id = None
+        best_sim = -1.0
+        best_cluster_data = None
+        
+        for doc in query.stream():
+            c_data = doc.to_dict()
+            c_emb = c_data.get("centroid_embedding")
+            if c_emb:
+                sim = cosine_similarity(embedding, c_emb)
+                if sim > best_sim:
+                    best_sim = sim
+                    best_cluster_id = doc.id
+                    best_cluster_data = c_data
+    except Exception as e:
+        print(f"Error querying clusters from Firestore: {e}")
+        return f"cluster-dev-{uuid.uuid4().hex[:8]}"
                 
     if best_sim >= SIMILARITY_THRESHOLD and best_cluster_id:
         # Attach to existing cluster

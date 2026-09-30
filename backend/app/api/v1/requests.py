@@ -14,19 +14,14 @@ from app.services.embeddings import generate_embedding
 from app.services.clustering import assign_to_cluster
 from app.services.gemini_vision import analyze_photo
 from app.config import settings
+from app.data import local_db
 
 router = APIRouter()
-
-# Global in-memory mock DB for when Firebase is not configured
-MOCK_DB = {
-    "requests": {},
-    "timelines": {}
-}
 
 @router.post("", response_model=RequestResponse)
 async def create_request(
     text: Optional[str] = Form(None),
-    language: str = Form(...),
+    language: str = Form("en"),
     lat: Optional[float] = Form(None),
     lng: Optional[float] = Form(None),
     state: Optional[str] = Form(None),
@@ -39,17 +34,24 @@ async def create_request(
     original_text = text or ""
     
     if audio:
-        upload_file_to_storage(audio, folder="audio")
-        audio_bytes = await audio.read()
-        original_text = transcribe_audio(audio_bytes, language_code=language)
+        try:
+            upload_file_to_storage(audio, folder="audio")
+            audio_bytes = await audio.read()
+            original_text = transcribe_audio(audio_bytes, language_code=language)
+        except Exception as e:
+            print(f"Error handling audio: {e}")
         
     photo_bytes = None
     photo_mime_type = None
+    photo_url = None
     if photo:
-        photo_bytes = await photo.read()
-        photo_mime_type = photo.content_type
-        await photo.seek(0)
-        upload_file_to_storage(photo, folder="photos")
+        try:
+            photo_bytes = await photo.read()
+            photo_mime_type = photo.content_type
+            await photo.seek(0)
+            photo_url = upload_file_to_storage(photo, folder="photos")
+        except Exception as e:
+            print(f"Error handling photo: {e}")
         
     if not original_text:
         original_text = "No text provided"
@@ -65,10 +67,13 @@ async def create_request(
     photo_analysis = None
     photo_severity = 0.0
     if photo_bytes and photo_mime_type:
-        photo_analysis_result = analyze_photo(photo_bytes, photo_mime_type, extraction.category)
-        if photo_analysis_result:
-            photo_analysis = photo_analysis_result.model_dump()
-            photo_severity = float(photo_analysis_result.severity)
+        try:
+            photo_analysis_result = analyze_photo(photo_bytes, photo_mime_type, extraction.category)
+            if photo_analysis_result:
+                photo_analysis = photo_analysis_result.model_dump()
+                photo_severity = float(photo_analysis_result.severity)
+        except Exception as e:
+            print(f"Photo analysis error: {e}")
             
     request_temp_data = {
         "location": {
@@ -81,17 +86,31 @@ async def create_request(
         "original_text": original_text,
         "photo_severity": photo_severity
     }
-    cluster_id = assign_to_cluster(embedding, request_temp_data)
+    
+    cluster_id = "cluster-default"
+    try:
+        cluster_id = assign_to_cluster(embedding, request_temp_data)
+    except Exception as e:
+        print(f"Cluster assignment error: {e}")
+        cluster_id = f"cluster-{uuid.uuid4().hex[:8]}"
     
     if language != "en" and not settings.DEV_MODE:
-        from google.cloud import translate_v2 as translate
-        client = translate.Client()
-        result = client.translate(f"Your request has been received. Tracking ID is {tracking_id}", target_language=language[:2])
-        confirmation_message = result["translatedText"]
+        try:
+            from google.cloud import translate_v2 as translate
+            client = translate.Client()
+            result = client.translate(f"Your request has been received. Tracking ID is {tracking_id}", target_language=language[:2])
+            confirmation_message = result["translatedText"]
+        except Exception as e:
+            print(f"Confirmation translation error: {e}")
+            confirmation_message = f"Your request has been received. Tracking ID is {tracking_id}"
     else:
         confirmation_message = f"Your request has been received. Tracking ID is {tracking_id}"
         
-    confirmation_audio_url = generate_tts_url(confirmation_message, language_code=language)
+    confirmation_audio_url = ""
+    try:
+        confirmation_audio_url = generate_tts_url(confirmation_message, language_code=language)
+    except Exception as e:
+        print(f"TTS generation error: {e}")
     
     now = datetime.now(timezone.utc)
     
@@ -114,28 +133,29 @@ async def create_request(
             "hint": extraction.location_hint
         },
         "vulnerable_group": extraction.vulnerable_group,
+        "photo_url": photo_url,
         "photo_analysis": photo_analysis,
         "cluster_id": cluster_id,
         "created_at": now.isoformat(),
         "confirmation_audio_url": confirmation_audio_url
     }
     
+    # Always persist locally to SQLite
+    local_db.save_request(request_doc)
+    
+    # Also write to Firestore if available
     db = get_db()
     if db:
-        req_ref = db.collection("requests").document(req_id)
-        req_ref.set(request_doc)
-        
-        timeline_ref = req_ref.collection("timeline").document()
-        timeline_ref.set({
-            "status": "received",
-            "timestamp": now.isoformat()
-        })
-    else:
-        MOCK_DB["requests"][req_id] = request_doc
-        MOCK_DB["timelines"][req_id] = [{
-            "status": "received",
-            "timestamp": now.isoformat()
-        }]
+        try:
+            req_ref = db.collection("requests").document(req_id)
+            req_ref.set(request_doc)
+            timeline_ref = req_ref.collection("timeline").document()
+            timeline_ref.set({
+                "status": "received",
+                "timestamp": now.isoformat()
+            })
+        except Exception as e:
+            print(f"Firestore save error (persisted to local DB): {e}")
     
     return RequestResponse(
         id=req_id,
@@ -148,6 +168,7 @@ async def create_request(
         original_text=original_text,
         confirmation_message=confirmation_message,
         confirmation_audio_url=confirmation_audio_url,
+        photo_url=photo_url,
         photo_analysis=photo_analysis,
         cluster_id=cluster_id,
         status="received"
@@ -155,73 +176,83 @@ async def create_request(
 
 @router.get("/mine", response_model=List[RequestResponse])
 def get_my_requests(current_user: dict = Depends(require_role(["citizen"]))):
-    db = get_db()
     results = []
     
+    # Try Firestore first if available
+    db = get_db()
     if db:
-        requests_query = db.collection("requests").where("uid", "==", current_user["uid"]).stream()
-        for doc in requests_query:
-            data = doc.to_dict()
-            for key in ["location", "vulnerable_group", "created_at", "uid"]:
-                if key in data:
-                    del data[key]
-            results.append(RequestResponse(**data))
-    else:
-        for req_id, data in MOCK_DB["requests"].items():
-            if data["uid"] == current_user["uid"]:
-                cleaned_data = data.copy()
+        try:
+            requests_query = db.collection("requests").where("uid", "==", current_user["uid"]).stream()
+            for doc in requests_query:
+                data = doc.to_dict()
                 for key in ["location", "vulnerable_group", "created_at", "uid"]:
-                    if key in cleaned_data:
-                        del cleaned_data[key]
-                results.append(RequestResponse(**cleaned_data))
-                
+                    if key in data:
+                        del data[key]
+                results.append(RequestResponse(**data))
+            if results:
+                return results
+        except Exception as e:
+            print(f"Firestore query error: {e}")
+            
+    # Fetch from local persistent database
+    local_rows = local_db.get_requests_for_user(current_user["uid"])
+    for row in local_rows:
+        cleaned = dict(row)
+        for key in ["location", "vulnerable_group", "created_at", "uid", "district_code", "district", "state", "lat", "lng", "block"]:
+            if key in cleaned:
+                del cleaned[key]
+        results.append(RequestResponse(**cleaned))
+        
     return results
 
 @router.get("/{tracking_id}", response_model=RequestDetailResponse)
 def get_request_detail(tracking_id: str, current_user: dict = Depends(get_current_user)):
-    db = get_db()
     request_data = None
     req_id = None
     timeline = []
     
+    # Try Firestore if available
+    db = get_db()
     if db:
-        requests_query = db.collection("requests").where("tracking_id", "==", tracking_id).stream()
-        for doc in requests_query:
-            request_data = doc.to_dict()
-            req_id = doc.id
-            break
-            
-        if not request_data:
-            raise HTTPException(status_code=404, detail="Request not found")
-            
-        for key in ["location", "vulnerable_group", "created_at", "uid"]:
-            if key in request_data:
-                del request_data[key]
-                
-        timeline_docs = db.collection("requests").document(req_id).collection("timeline").order_by("timestamp").stream()
-        for t_doc in timeline_docs:
-            t_data = t_doc.to_dict()
-            timeline.append(TimelineItem(status=t_data["status"], timestamp=t_data["timestamp"]))
-    else:
-        for r_id, data in MOCK_DB["requests"].items():
-            if data["tracking_id"] == tracking_id:
-                request_data = data.copy()
-                req_id = r_id
+        try:
+            requests_query = db.collection("requests").where("tracking_id", "==", tracking_id).stream()
+            for doc in requests_query:
+                request_data = doc.to_dict()
+                req_id = doc.id
                 break
                 
-        if not request_data:
-            raise HTTPException(status_code=404, detail="Request not found")
+            if request_data:
+                for key in ["location", "vulnerable_group", "created_at", "uid"]:
+                    if key in request_data:
+                        del request_data[key]
+                timeline_docs = db.collection("requests").document(req_id).collection("timeline").order_by("timestamp").stream()
+                for t_doc in timeline_docs:
+                    t_data = t_doc.to_dict()
+                    timeline.append(TimelineItem(status=t_data["status"], timestamp=t_data["timestamp"]))
+                return RequestDetailResponse(
+                    request_details=RequestResponse(**request_data),
+                    timeline=timeline
+                )
+        except Exception as e:
+            print(f"Firestore query error: {e}")
+
+    # Fallback to local persistent DB
+    local_data = local_db.get_request_by_tracking(tracking_id)
+    if not local_data:
+        raise HTTPException(status_code=404, detail="Request not found")
+        
+    req_id = local_data.get("id")
+    cleaned = dict(local_data)
+    for key in ["location", "vulnerable_group", "created_at", "uid", "district_code", "district", "state", "lat", "lng", "block"]:
+        if key in cleaned:
+            del cleaned[key]
             
-        for key in ["location", "vulnerable_group", "created_at", "uid"]:
-            if key in request_data:
-                del request_data[key]
-                
-        if req_id in MOCK_DB["timelines"]:
-            for t_data in MOCK_DB["timelines"][req_id]:
-                timeline.append(TimelineItem(status=t_data["status"], timestamp=t_data["timestamp"]))
-                
+    tl_items = local_db.get_timeline_for_request(req_id)
+    for t_data in tl_items:
+        timeline.append(TimelineItem(status=t_data["status"], timestamp=t_data["timestamp"]))
+        
     return RequestDetailResponse(
-        request_details=RequestResponse(**request_data),
+        request_details=RequestResponse(**cleaned),
         timeline=timeline
     )
 
@@ -232,40 +263,28 @@ def update_request_status(
     note: Optional[str] = Body(None),
     current_user: dict = Depends(require_role(["officer", "admin"]))
 ):
-    db = get_db()
     now = datetime.now(timezone.utc)
     
+    # Update local persistent database
+    local_db.update_request(id, status, note)
+    
+    # Update Firestore if available
+    db = get_db()
     if db:
-        req_ref = db.collection("requests").document(id)
-        doc = req_ref.get()
-        if not doc.exists:
-            raise HTTPException(status_code=404, detail="Request not found")
+        try:
+            req_ref = db.collection("requests").document(id)
+            doc = req_ref.get()
+            if doc.exists:
+                req_ref.update({"status": status})
+                timeline_ref = req_ref.collection("timeline").document()
+                timeline_data = {
+                    "status": status,
+                    "timestamp": now.isoformat()
+                }
+                if note:
+                    timeline_data["note"] = note
+                timeline_ref.set(timeline_data)
+        except Exception as e:
+            print(f"Firestore update error: {e}")
             
-        req_ref.update({"status": status})
-        
-        timeline_ref = req_ref.collection("timeline").document()
-        timeline_data = {
-            "status": status,
-            "timestamp": now.isoformat()
-        }
-        if note:
-            timeline_data["note"] = note
-        timeline_ref.set(timeline_data)
-    else:
-        if id not in MOCK_DB["requests"]:
-            raise HTTPException(status_code=404, detail="Request not found")
-            
-        MOCK_DB["requests"][id]["status"] = status
-        timeline_data = {
-            "status": status,
-            "timestamp": now.isoformat()
-        }
-        if note:
-            timeline_data["note"] = note
-            
-        if id not in MOCK_DB["timelines"]:
-            MOCK_DB["timelines"][id] = []
-        MOCK_DB["timelines"][id].append(timeline_data)
-        
     return {"message": "Status updated successfully"}
-

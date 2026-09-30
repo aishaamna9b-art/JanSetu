@@ -21,7 +21,7 @@ def extract_request_details(text: str) -> GeminiExtractionResult:
             translated_text=None
         )
         
-    if settings.DEV_MODE or not settings.GEMINI_API_KEY:
+    if not settings.GEMINI_API_KEY:
         return GeminiExtractionResult(
             category=Category.WATER,
             sub_issue="mock issue",
@@ -56,10 +56,16 @@ def extract_request_details(text: str) -> GeminiExtractionResult:
     """
     
     try:
-        response = client.models.generate_content(
-            model='gemini-3.8-flash',
-            contents=prompt,
-        )
+        try:
+            response = client.models.generate_content(
+                model='gemini-3.5-flash-lite',
+                contents=prompt,
+            )
+        except Exception:
+            response = client.models.generate_content(
+                model='gemini-3.8-flash',
+                contents=prompt,
+            )
         
         raw_text = response.text.strip()
         if raw_text.startswith("```json"):

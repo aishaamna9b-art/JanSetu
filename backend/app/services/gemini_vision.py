@@ -9,7 +9,7 @@ def get_gemini_client():
     return genai.Client(api_key=settings.GEMINI_API_KEY)
 
 def analyze_photo(photo_bytes: bytes, mime_type: str, claimed_category: str) -> PhotoAnalysisSchema:
-    if settings.DEV_MODE or not settings.GEMINI_API_KEY:
+    if not settings.GEMINI_API_KEY:
         return PhotoAnalysisSchema(
             matches_request=True,
             detected_issue="Mock issue from dev mode",
@@ -39,7 +39,7 @@ def analyze_photo(photo_bytes: bytes, mime_type: str, claimed_category: str) -> 
     
     try:
         response = client.models.generate_content(
-            model='gemini-3.2-vision',
+            model='gemini-3.5-flash-lite',
             contents=[
                 types.Part.from_bytes(data=photo_bytes, mime_type=mime_type),
                 prompt
