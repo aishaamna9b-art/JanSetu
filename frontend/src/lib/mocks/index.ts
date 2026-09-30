@@ -74,7 +74,7 @@ export async function handleMockRequest(endpoint: string, options: RequestInit) 
     };
   }
 
-  if (endpoint.startsWith('/dashboard/overview') && (options.method === 'GET' || !options.method)) {
+  if (endpoint.startsWith('/analytics/summary') && (options.method === 'GET' || !options.method)) {
     return {
       kpis: {
         total_requests: 15420,
@@ -107,103 +107,49 @@ export async function handleMockRequest(endpoint: string, options: RequestInit) 
   }
 
   if (endpoint.startsWith('/analytics/gaps') && (options.method === 'GET' || !options.method)) {
+    const categories = ['Water', 'Roads', 'Health', 'Education', 'Sanitation'];
+    const blocks = ['Phulwari', 'Danapur', 'Patna Sadar', 'Sampatchak', 'Maner', 'Bihta', 'Naubatpur', 'Bikram', 'Paliganj', 'Masaurhi'];
+    return Array.from({ length: 50 }, (_, i) => ({
+      block: blocks[i % blocks.length] + (i >= 10 ? ` Ward ${Math.floor(i/10)+1}` : ''),
+      district: 'Lucknow',
+      category: categories[i % 5],
+      demand_count: 100 + Math.floor(Math.random() * 900),
+      infra_index: 0.2 + Math.random() * 0.7,
+      public_spending: 500000 + Math.floor(Math.random() * 9500000),
+      gap_score: 0.3 + Math.random() * 0.7,
+    }));
+  }
+
+  if (endpoint === '/impact' && (options.method === 'GET' || !options.method)) {
     return [
-      {
-        block: "Gomti Nagar",
-        district: "Lucknow",
-        category: "water",
-        demand_count: 145,
-        infra_index: 0.35,
-        spending: 1200000,
-        gap_score: 0.92
-      },
-      {
-        block: "Swaroop Nagar",
-        district: "Kanpur",
-        category: "electricity",
-        demand_count: 89,
-        infra_index: 0.65,
-        spending: 3400000,
-        gap_score: 0.45
-      },
-      {
-        block: "Lanka",
-        district: "Varanasi",
-        category: "roads",
-        demand_count: 42,
-        infra_index: 0.40,
-        spending: 800000,
-        gap_score: 0.78
-      },
-      {
-        block: "Alambagh",
-        district: "Lucknow",
-        category: "sanitation",
-        demand_count: 110,
-        infra_index: 0.20,
-        spending: 500000,
-        gap_score: 0.95
-      }
+      { district: "Lucknow", raised: 5200, resolved: 4100, resolution_rate: 0.78 },
+      { district: "Kanpur", raised: 4800, resolved: 3200, resolution_rate: 0.66 },
+      { district: "Varanasi", raised: 3100, resolved: 2800, resolution_rate: 0.90 },
+      { district: "Agra", raised: 2900, resolved: 1400, resolution_rate: 0.48 },
+      { district: "Prayagraj", raised: 3500, resolved: 1900, resolution_rate: 0.54 }
     ];
   }
 
   if (endpoint.startsWith('/recommendations') && (options.method === 'GET' || !options.method)) {
-    return [
-      {
-        project_id: "proj-901",
-        cluster_id: "cluster-891",
-        title: "Gomti Nagar Main Pipeline Replacement",
-        category: "water",
-        region: "Gomti Nagar, Lucknow",
-        people_served: 15000,
-        cost_estimate: 2500000,
-        priority_score: 95,
-        score_breakdown: {
-          volume: 20,
-          urgency: 25,
-          severity: 20,
-          infra_gap: 15,
-          population: 15
-        },
-        ai_justification: "High volume of severe water leak reports combined with a low historical infrastructure index for water supply in this block."
+    const categories = ['WATER_SUPPLY', 'ROAD_INFRA', 'HEALTHCARE', 'EDUCATION', 'SANITATION'];
+    return Array.from({ length: 50 }, (_, i) => ({
+      project_id: `proj-${i}`,
+      cluster_id: `cluster-${i}`,
+      title: `${categories[i % 5].replace('_', ' ')} Upgrade Project ${i + 1}`,
+      category: categories[i % 5],
+      region: `Region ${Math.floor(i / 5) + 1}, Lucknow`,
+      people_served: 1000 + Math.floor(Math.random() * 50000),
+      cost_estimate: 1000000 + Math.floor(Math.random() * 20000000),
+      priority_score: 40 + Math.floor(Math.random() * 60),
+      score_breakdown: {
+        volume: 10 + Math.floor(Math.random() * 20),
+        urgency: 10 + Math.floor(Math.random() * 20),
+        severity: 10 + Math.floor(Math.random() * 20),
+        infra_gap: 10 + Math.floor(Math.random() * 20),
+        population: 10 + Math.floor(Math.random() * 20),
       },
-      {
-        project_id: "proj-902",
-        cluster_id: "cluster-894",
-        title: "Alambagh Sanitation Overhaul",
-        category: "sanitation",
-        region: "Alambagh, Lucknow",
-        people_served: 22000,
-        cost_estimate: 1800000,
-        priority_score: 88,
-        score_breakdown: {
-          volume: 18,
-          urgency: 20,
-          severity: 15,
-          infra_gap: 25,
-          population: 10
-        },
-        ai_justification: "Critical sanitation gaps identified. Very low spending in this area despite growing population and increasing health-related citizen complaints."
-      },
-      {
-        project_id: "proj-903",
-        cluster_id: "cluster-893",
-        title: "Lanka University Road Repair",
-        category: "roads",
-        region: "Lanka, Varanasi",
-        people_served: 8500,
-        cost_estimate: 3200000,
-        priority_score: 72,
-        score_breakdown: {
-          volume: 10,
-          urgency: 15,
-          severity: 25,
-          infra_gap: 12,
-          population: 10
-        },
-        ai_justification: "Large potholes causing daily accidents. Though demand count is lower, the severity of the issue requires immediate attention."
-      }
-    ];
+      ai_justification: `AI Analysis indicates significant need in ${categories[i%5].toLowerCase()} sector. By targeting this area, we can improve living standards for over ${1000 + Math.floor(Math.random() * 50000)} citizens. The projected cost-to-impact ratio is highly favorable compared to historical benchmarks.`
+    }));
   }
 
   if (endpoint === '/simulator/run' && options.method === 'POST') {

@@ -5,7 +5,6 @@ import Login from './pages/Login';
 
 // Citizen
 import CitizenLayout from './components/CitizenLayout';
-import CitizenHome from './pages/citizen/Home';
 import SubmitRequest from './pages/citizen/SubmitRequest';
 import Confirmation from './pages/citizen/Confirmation';
 import MyRequests from './pages/citizen/MyRequests';
@@ -47,8 +46,7 @@ export const router = createBrowserRouter([
       {
         element: <CitizenLayout />,
         children: [
-          { index: true, element: <CitizenHome /> },
-          { path: 'submit', element: <SubmitRequest /> },
+          { index: true, element: <SubmitRequest /> },
           { path: 'confirmation/:id', element: <Confirmation /> },
           { path: 'requests', element: <MyRequests /> },
           { path: 'requests/:id', element: <TrackRequest /> },

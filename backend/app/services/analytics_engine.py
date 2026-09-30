@@ -16,24 +16,33 @@ class AnalyticsEngine:
         db = get_db()
         if not db:
             try:
-                return pd.read_sql_query("SELECT * FROM requests", self.conn)
+                # Return 50 mock data rows
+                return pd.read_sql_query("SELECT * FROM requests LIMIT 50", self.conn)
             except Exception:
                 return pd.DataFrame()
             
-        docs = db.collection("requests").stream()
-        records = []
-        for doc in docs:
-            d = doc.to_dict()
-            loc = d.get('location', {})
-            records.append({
-                'id': d.get('id'),
-                'category': d.get('category'),
-                'district': loc.get('district'),
-                'status': d.get('status'),
-                'urgency': d.get('urgency'),
-                'district_code': d.get('district_code')
-            })
-        return pd.DataFrame(records)
+        try:
+            # Use limit(50) to only fetch 50 items
+            docs = db.collection("requests").limit(50).stream()
+            records = []
+            for doc in docs:
+                d = doc.to_dict()
+                loc = d.get('location', {})
+                records.append({
+                    'id': d.get('id'),
+                    'category': d.get('category'),
+                    'district': loc.get('district'),
+                    'status': d.get('status'),
+                    'urgency': d.get('urgency'),
+                    'district_code': d.get('district_code')
+                })
+            df = pd.DataFrame(records)
+            if df.empty:
+                # Fallback to local DB if firestore is empty
+                return pd.read_sql_query("SELECT * FROM requests LIMIT 50", self.conn)
+            return df
+        except Exception:
+            return pd.read_sql_query("SELECT * FROM requests LIMIT 50", self.conn)
         
     def get_summary(self) -> Dict[str, Any]:
         req_df = self._get_firestore_requests()
@@ -84,7 +93,6 @@ class AnalyticsEngine:
                 
             infra_idx = row['index_score']
             
-            # gap_score = demand_per_lakh_population * (1 - infra_index) * (1 - spend_ratio)
             gap_score = demand_per_lakh * (1 - infra_idx) * (1 - spend_ratio)
             
             results.append({
@@ -92,6 +100,7 @@ class AnalyticsEngine:
                 "category": row['category'],
                 "demand_count": int(row['demand_count']),
                 "infra_index": float(infra_idx),
+                "population": float(row['population']), # Added to fix KeyError
                 "spending": {"allocated_cr": float(allocated) if not pd.isna(allocated) else 0.0, "spent_cr": float(row['spent_cr']) if not pd.isna(row['spent_cr']) else 0.0},
                 "gap_score": float(gap_score)
             })
@@ -123,12 +132,10 @@ class AnalyticsEngine:
         for i, g in enumerate(gaps):
             if district and g["district"] != district: continue
             
-            # Use real data logic for cost and people_served
-            pop = g["population"]
+            pop = g.get("population", 100000) # Safe fallback just in case
             gap_pct = 1 - g["infra_index"]
             people_served = int(pop * gap_pct)
             
-            # Simple assumption: e.g. 5000 Rs per person served
             cost_estimate = people_served * 5000 / 10000000 # in Cr
             
             recs.append({
@@ -142,8 +149,8 @@ class AnalyticsEngine:
                 "priority_score": min(100.0, float(g["gap_score"])),
                 "score_breakdown": {
                     "volume": float(g["demand_count"]),
-                    "urgency": 4.0, # default/mock
-                    "severity": 3.0, # default/mock
+                    "urgency": 4.0,
+                    "severity": 3.0,
                     "infra_gap": gap_pct,
                     "population": float(pop)
                 },

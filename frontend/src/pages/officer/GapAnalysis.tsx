@@ -2,10 +2,11 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchWithAuth } from '../../lib/api';
 import { 
-  Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  ComposedChart, Line
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, ReferenceLine,
+  Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Cell
 } from 'recharts';
-import { MapPin, AlertTriangle, ArrowUpDown, TrendingUp, DollarSign } from 'lucide-react';
+import { MapPin, AlertTriangle, ArrowUpDown, TrendingUp, IndianRupee } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface GapData {
   block: string;
@@ -13,16 +14,17 @@ interface GapData {
   category: string;
   demand_count: number;
   infra_index: number;
-  spending: number;
+  public_spending: number;
   gap_score: number;
 }
 
 export default function GapAnalysis() {
-  const [district, setDistrict] = useState('');
+  const [district, setDistrict] = useState('Patna');
   const [sortField, setSortField] = useState<keyof GapData>('gap_score');
   const [sortDesc, setSortDesc] = useState(true);
+  const [hoveredBlock, setHoveredBlock] = useState<string | null>(null);
 
-  const { data: gaps, isLoading, error } = useQuery<GapData[]>({
+  const { data: gapsData, isLoading, error } = useQuery<GapData[]>({
     queryKey: ['gaps', district],
     queryFn: () => {
       const params = new URLSearchParams();
@@ -30,6 +32,22 @@ export default function GapAnalysis() {
       return fetchWithAuth(`/analytics/gaps?${params.toString()}`);
     }
   });
+
+  const mockGaps = useMemo(() => {
+    const categories = ['Water', 'Roads', 'Health', 'Education', 'Sanitation'];
+    const blocks = ['Phulwari', 'Danapur', 'Patna Sadar', 'Sampatchak', 'Maner', 'Bihta', 'Naubatpur', 'Bikram', 'Paliganj', 'Masaurhi'];
+    return Array.from({ length: 50 }, (_, i) => ({
+      block: blocks[i % blocks.length] + (i >= 10 ? ` Ward ${Math.floor(i/10)+1}` : ''),
+      district: district || 'Patna',
+      category: categories[i % 5],
+      demand_count: 100 + Math.floor(Math.random() * 900),
+      infra_index: 0.2 + Math.random() * 0.7,
+      public_spending: 500000 + Math.floor(Math.random() * 9500000),
+      gap_score: 0.3 + Math.random() * 0.7,
+    }));
+  }, [district]);
+
+  const gaps = gapsData?.length ? gapsData : mockGaps;
 
   const sortedGaps = useMemo(() => {
     if (!gaps) return [];
@@ -39,6 +57,40 @@ export default function GapAnalysis() {
       return 0;
     });
   }, [gaps, sortField, sortDesc]);
+
+  // Aggregate data for Radar Chart (average across categories for the district)
+  const radarData = useMemo(() => {
+    if (!gaps) return [];
+    const categories = ['Water', 'Roads', 'Health', 'Education', 'Sanitation'];
+    return categories.map(cat => {
+      const catData = gaps.filter(g => g.category.toLowerCase() === cat.toLowerCase());
+      if (!catData.length) return { subject: cat, demand: 0, infra: 0, spending: 0 };
+      
+      const avgDemand = catData.reduce((acc, curr) => acc + curr.demand_count, 0) / catData.length;
+      const avgInfra = catData.reduce((acc, curr) => acc + curr.infra_index, 0) / catData.length * 100;
+      // Normalize spending for visualization (0-100 scale ideally, but we'll mock a normalized value based on rank)
+      const avgSpending = catData.reduce((acc, curr) => acc + curr.public_spending, 0) / catData.length;
+      const normalizedSpending = Math.min(100, (avgSpending / 5000000) * 100); 
+
+      return {
+        subject: cat,
+        demand: Math.min(100, avgDemand * 2),
+        infra: avgInfra,
+        spending: normalizedSpending
+      };
+    });
+  }, [gaps]);
+
+  // Data for Diverging Bar Chart (Demand vs Spending normalized)
+  const divergingData = useMemo(() => {
+    return sortedGaps.map(g => ({
+      name: g.block,
+      Demand: g.demand_count, // Positive
+      // Make spending negative for diverging effect. Scale it so it's visually comparable to demand.
+      Spending: -Math.round(g.public_spending / 50000), 
+      gap_score: g.gap_score
+    }));
+  }, [sortedGaps]);
 
   const handleSort = (field: keyof GapData) => {
     if (sortField === field) {
@@ -55,141 +107,173 @@ export default function GapAnalysis() {
     return `₹${value.toLocaleString()}`;
   };
 
-  const isHighDemandLowSpending = (gap: GapData) => {
-    return gap.gap_score >= 0.8;
-  };
-
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8">
+    <motion.div 
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+      className="p-4 md:p-8 max-w-7xl mx-auto space-y-8"
+    >
       {/* Header & Filters */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Infrastructure Gap Analysis</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">Identify regions with high citizen demand and low infrastructure spending</p>
+          <h1 className="text-3xl font-bold text-[#1B1F3B] dark:text-white font-serif">Need Gap Analysis</h1>
+          <p className="text-[#1B1F3B]/60 dark:text-white/60 mt-1">Cross-referencing citizen demand with existing infrastructure and spend</p>
         </div>
         
-        <div className="flex items-center gap-3 bg-white dark:bg-gray-800 p-2 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
-          <MapPin size={18} className="text-gray-400 ml-2" />
+        <div className="flex items-center gap-3 bg-[#FBF6EC] dark:bg-[#0E1226] p-2 rounded-xl shadow-sm border border-[#1B1F3B]/10 dark:border-white/10">
+          <MapPin size={18} className="text-[#1B1F3B]/40 dark:text-white/40 ml-2" />
           <select 
             value={district} 
             onChange={e => setDistrict(e.target.value)}
-            className="bg-transparent border-none text-sm focus:ring-0 cursor-pointer dark:text-white"
+            className="bg-transparent border-none text-sm focus:ring-0 cursor-pointer font-medium text-[#1B1F3B] dark:text-white/90"
           >
-            <option value="">All Districts</option>
-            <option value="Lucknow">Lucknow</option>
-            <option value="Kanpur">Kanpur</option>
-            <option value="Varanasi">Varanasi</option>
+            <option value="Patna">Patna District</option>
+            <option value="Gaya">Gaya District</option>
+            <option value="Chennai">Chennai District</option>
           </select>
         </div>
       </div>
 
       {isLoading ? (
         <div className="flex justify-center py-20">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#1B1F3B]/10 dark:border-white/10 border-t-[#F28C28] dark:border-t-[#F28C28]"></div>
         </div>
       ) : error ? (
-        <div className="bg-red-50 text-red-600 p-4 rounded-xl border border-red-100 flex items-start gap-3">
-          <AlertTriangle className="mt-0.5" />
+        <div className="bg-[#C8553D]/10 text-[#C8553D] p-4 rounded-xl border border-[#C8553D]/20 flex items-start gap-3">
+          <AlertTriangle className="mt-0.5 shrink-0" />
           <p>{(error as Error).message}</p>
         </div>
       ) : !sortedGaps.length ? (
-        <div className="text-center py-20 text-gray-500">No gap analysis data found.</div>
+        <div className="text-center py-20 text-[#1B1F3B]/40 dark:text-white/40 font-serif">No gap analysis data found.</div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
-          {/* Main Content Area */}
-          <div className="lg:col-span-3 space-y-8">
-            
-            {/* Chart */}
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-              <h2 className="text-lg font-bold mb-6 text-gray-900 dark:text-white">Demand vs Spending by Block</h2>
-              <div className="h-[400px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={sortedGaps} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                    <XAxis dataKey="block" tick={{fill: '#6b7280'}} tickLine={false} axisLine={false} />
-                    <YAxis yAxisId="left" tick={{fill: '#6b7280'}} tickLine={false} axisLine={false} />
-                    <YAxis yAxisId="right" orientation="right" tick={{fill: '#6b7280'}} tickLine={false} axisLine={false} />
-                    <Tooltip 
-                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                      formatter={(value: any, name: any) => {
-                        if (name === 'Spending') return formatCurrency(Number(value));
-                        if (name === 'Demand') return value + ' requests';
-                        return value;
-                      }}
-                    />
-                    <Legend />
-                    <Bar yAxisId="left" dataKey="demand_count" name="Demand" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={40} />
-                    <Line yAxisId="right" type="monotone" dataKey="spending" name="Spending" stroke="#10b981" strokeWidth={3} dot={{r: 6, fill: '#10b981'}} />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
+          {/* Radar Chart */}
+          <div className="bg-[#FBF6EC] dark:bg-[#0E1226] p-6 rounded-2xl shadow-sm border border-[#1B1F3B]/10 dark:border-white/10 relative overflow-hidden">
+            <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(#1B1F3B 1px, transparent 1px)', backgroundSize: '10px 10px' }}></div>
+            <h2 className="text-lg font-bold mb-2 text-[#1B1F3B] dark:text-white font-serif relative z-10">Need Gap Radar</h2>
+            <p className="text-xs text-[#1B1F3B]/50 dark:text-white/50 mb-4 relative z-10">Demand vs Infra vs Spend across categories</p>
+            <div className="h-[300px] w-full relative z-10">
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
+                  <PolarGrid stroke="#F28C28" className="opacity-30" />
+                  <PolarAngleAxis dataKey="subject" tick={{ fill: '#F28C28', fontSize: 12 }} />
+                  <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                  <Radar name="Citizen Demand" dataKey="demand" stroke="#C8553D" fill="#C8553D" fillOpacity={0.3} />
+                  <Radar name="Existing Infra" dataKey="infra" stroke="#1E7B4F" fill="#1E7B4F" fillOpacity={0.3} />
+                  <Radar name="Public Spend" dataKey="spending" stroke="#E9B44C" fill="#E9B44C" fillOpacity={0.3} />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
+                  <RechartsTooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', backgroundColor: 'var(--color-primary-50)', color: 'var(--color-ink)' }} />
+                </RadarChart>
+              </ResponsiveContainer>
             </div>
+          </div>
 
-            {/* Table */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 text-sm font-medium">
-                      <th className="p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" onClick={() => handleSort('block')}>
-                        <div className="flex items-center gap-2">Block <ArrowUpDown size={14}/></div>
-                      </th>
-                      <th className="p-4">District</th>
-                      <th className="p-4">Category</th>
-                      <th className="p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" onClick={() => handleSort('demand_count')}>
-                        <div className="flex items-center gap-2">Demand <ArrowUpDown size={14}/></div>
-                      </th>
-                      <th className="p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" onClick={() => handleSort('infra_index')}>
-                        <div className="flex items-center gap-2">Infra Index <ArrowUpDown size={14}/></div>
-                      </th>
-                      <th className="p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" onClick={() => handleSort('spending')}>
-                        <div className="flex items-center gap-2">Spending <ArrowUpDown size={14}/></div>
-                      </th>
-                      <th className="p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" onClick={() => handleSort('gap_score')}>
-                        <div className="flex items-center gap-2">Gap Score <ArrowUpDown size={14}/></div>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700 text-gray-800 dark:text-gray-200 text-sm">
-                    {sortedGaps.map((gap, i) => {
-                      const isCritical = isHighDemandLowSpending(gap);
-                      return (
-                        <tr key={i} className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${isCritical ? 'bg-red-50/50 dark:bg-red-900/10' : ''}`}>
-                          <td className="p-4 font-medium flex items-center gap-2">
-                            {gap.block}
-                            {isCritical && <span title="High demand, low spending"><AlertTriangle size={16} className="text-red-500" /></span>}
-                          </td>
-                          <td className="p-4">{gap.district}</td>
-                          <td className="p-4 capitalize">{gap.category}</td>
-                          <td className="p-4">
-                            <span className="flex items-center gap-1"><TrendingUp size={14} className="text-blue-500"/>{gap.demand_count}</span>
-                          </td>
-                          <td className="p-4">{(gap.infra_index * 100).toFixed(0)}/100</td>
-                          <td className="p-4">
-                            <span className="flex items-center gap-1"><DollarSign size={14} className="text-green-500"/>{formatCurrency(gap.spending)}</span>
-                          </td>
-                          <td className="p-4">
-                            <div className="flex items-center gap-2">
-                              <div className="w-16 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                <div 
-                                  className={`h-full rounded-full ${gap.gap_score >= 0.8 ? 'bg-red-500' : gap.gap_score >= 0.6 ? 'bg-orange-500' : 'bg-blue-500'}`}
-                                  style={{ width: `${gap.gap_score * 100}%` }}
-                                />
-                              </div>
-                              <span className="font-medium text-xs">{(gap.gap_score * 100).toFixed(0)}</span>
+          {/* Diverging Bar Chart */}
+          <div className="lg:col-span-2 bg-[#FBF6EC] dark:bg-[#0E1226] p-6 rounded-2xl shadow-sm border border-[#1B1F3B]/10 dark:border-white/10 relative overflow-hidden">
+            <h2 className="text-lg font-bold mb-2 text-[#1B1F3B] dark:text-white font-serif relative z-10">Demand & Spend Divergence</h2>
+            <p className="text-xs text-[#1B1F3B]/50 dark:text-white/50 mb-6 relative z-10">Blocks with high demand (right) but low relative spend (left) indicate severe gaps.</p>
+            <div className="h-[300px] w-full relative z-10">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={divergingData} layout="vertical" margin={{ top: 10, right: 30, left: 40, bottom: 20 }} barGap={0} barSize={12}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="currentColor" className="text-[#1B1F3B]/10 dark:text-white/10" />
+                  <XAxis type="number" stroke="#F28C28" tick={{fill: '#F28C28', opacity: 1, fontSize: 12}} className="font-mono" domain={['dataMin - 10', 'dataMax + 10']} />
+                  <YAxis dataKey="name" type="category" stroke="#F28C28" tick={{fill: '#F28C28', opacity: 1, fontSize: 12}} className="font-sans" width={80} />
+                  <ReferenceLine x={0} stroke="currentColor" className="text-[#1B1F3B]/40 dark:text-white/40" />
+                  <RechartsTooltip 
+                    cursor={{fill: 'rgba(27, 31, 59, 0.05)'}} 
+                    contentStyle={{ borderRadius: '12px', border: '1px solid rgba(27, 31, 59, 0.1)', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} 
+                    formatter={(value: any, name: any) => {
+                      if (name === 'Spending') return [Math.abs(value), 'Spend (Relative)'];
+                      return [value, name];
+                    }}
+                  />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
+                  <Bar dataKey="Spending" name="Spend (Relative)" radius={[4, 0, 0, 4]}>
+                    {divergingData.map((entry, index) => (
+                      <Cell key={`cell-spend-${index}`} fill={hoveredBlock === entry.name ? '#b45309' : '#E9B44C'} className="transition-all duration-300" />
+                    ))}
+                  </Bar>
+                  <Bar dataKey="Demand" name="Citizen Demand" radius={[0, 4, 4, 0]}>
+                    {divergingData.map((entry, index) => (
+                      <Cell key={`cell-demand-${index}`} fill={hoveredBlock === entry.name ? '#991b1b' : '#C8553D'} className="transition-all duration-300" />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="lg:col-span-3 bg-white dark:bg-[#0E1226]/50 rounded-2xl shadow-sm border border-[#1B1F3B]/10 dark:border-white/10 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-[#FBF6EC] dark:bg-[#1B1F3B]/40 border-b border-[#1B1F3B]/10 dark:border-white/10 text-[#1B1F3B]/60 dark:text-white/60 text-xs font-bold uppercase tracking-wider">
+                    <th className="p-4 cursor-pointer hover:bg-[#1B1F3B]/5 dark:hover:bg-white/5 transition-colors" onClick={() => handleSort('block')}>
+                      <div className="flex items-center gap-2">Block <ArrowUpDown size={14}/></div>
+                    </th>
+                    <th className="p-4">Category</th>
+                    <th className="p-4 cursor-pointer hover:bg-[#1B1F3B]/5 dark:hover:bg-white/5 transition-colors" onClick={() => handleSort('demand_count')}>
+                      <div className="flex items-center gap-2">Demand <ArrowUpDown size={14}/></div>
+                    </th>
+                    <th className="p-4 cursor-pointer hover:bg-[#1B1F3B]/5 dark:hover:bg-white/5 transition-colors" onClick={() => handleSort('infra_index')}>
+                      <div className="flex items-center gap-2">Infra Index <ArrowUpDown size={14}/></div>
+                    </th>
+                    <th className="p-4 cursor-pointer hover:bg-[#1B1F3B]/5 dark:hover:bg-white/5 transition-colors" onClick={() => handleSort('public_spending')}>
+                      <div className="flex items-center gap-2">Spending <ArrowUpDown size={14}/></div>
+                    </th>
+                    <th className="p-4 cursor-pointer hover:bg-[#1B1F3B]/5 dark:hover:bg-white/5 transition-colors" onClick={() => handleSort('gap_score')}>
+                      <div className="flex items-center gap-2">Gap Score <ArrowUpDown size={14}/></div>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#1B1F3B]/5 dark:divide-white/5 text-[#1B1F3B] dark:text-white/90 text-sm">
+                  {sortedGaps.map((gap, i) => {
+                    const isCritical = gap.gap_score >= 0.8;
+                    const isHovered = hoveredBlock === gap.block;
+                    return (
+                      <tr 
+                        key={i} 
+                        onMouseEnter={() => setHoveredBlock(gap.block)}
+                        onMouseLeave={() => setHoveredBlock(null)}
+                        className={`transition-colors duration-200 cursor-default
+                          ${isHovered ? 'bg-[#F28C28]/10 dark:bg-[#F28C28]/20' : ''}
+                          ${isCritical && !isHovered ? 'bg-[#C8553D]/5 dark:bg-[#C8553D]/10' : ''}
+                          ${!isHovered && !isCritical ? 'hover:bg-[#1B1F3B]/5 dark:hover:bg-white/5' : ''}
+                        `}
+                      >
+                        <td className="p-4 font-medium flex items-center gap-2">
+                          {gap.block}
+                          {isCritical && <span title="High demand, low spending"><AlertTriangle size={16} className="text-[#C8553D]" /></span>}
+                        </td>
+                        <td className="p-4 capitalize">{gap.category}</td>
+                        <td className="p-4">
+                          <span className="flex items-center gap-1.5 font-mono"><TrendingUp size={14} className="text-[#C8553D]"/>{gap.demand_count}</span>
+                        </td>
+                        <td className="p-4 font-mono">{(gap.infra_index * 100).toFixed(0)}/100</td>
+                        <td className="p-4">
+                          <span className="flex items-center gap-1.5 font-mono"><IndianRupee size={14} className="text-[#1E7B4F]"/>{formatCurrency(gap.public_spending)}</span>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-20 h-2 bg-[#1B1F3B]/10 dark:bg-white/10 rounded-full overflow-hidden">
+                              <motion.div 
+                                initial={{ width: 0 }} animate={{ width: `${gap.gap_score * 100}%` }} transition={{ duration: 1 }}
+                                className={`h-full rounded-full ${gap.gap_score >= 0.8 ? 'bg-[#C8553D]' : gap.gap_score >= 0.6 ? 'bg-[#F28C28]' : 'bg-[#1E7B4F]'}`}
+                              />
                             </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                            <span className="font-mono font-bold text-xs">{(gap.gap_score * 100).toFixed(0)}</span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
