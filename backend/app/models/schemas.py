@@ -7,6 +7,57 @@ class AuthSessionResponse(BaseModel):
     role: str
     language: str
     region: str
+    is_new_user: bool
+    profile_complete: bool
+
+class IDProofSchema(BaseModel):
+    type: str
+    last4: str
+
+class PersonalDetailsSchema(BaseModel):
+    full_name: Optional[str] = None
+    relation_type: Optional[str] = None
+    relation_name: Optional[str] = None
+    dob: Optional[str] = None
+    gender: Optional[str] = None
+
+class ContactDetailsSchema(BaseModel):
+    mobile: Optional[str] = None
+    email: Optional[str] = None
+    alt_mobile: Optional[str] = None
+
+class AddressDetailsSchema(BaseModel):
+    house_no: Optional[str] = None
+    street: Optional[str] = None
+    village_or_ward: Optional[str] = None
+    post_office: Optional[str] = None
+    pincode: Optional[str] = None
+    block: Optional[str] = None
+    district: Optional[str] = None
+    state: Optional[str] = None
+
+class PreferencesSchema(BaseModel):
+    language: Optional[str] = None
+    notify_sms: bool = False
+    notify_whatsapp: bool = False
+
+class UserProfileSchema(BaseModel):
+    uid: str
+    role: str = "citizen"
+    profile_complete: bool = False
+    personal: PersonalDetailsSchema = Field(default_factory=PersonalDetailsSchema)
+    contact: ContactDetailsSchema = Field(default_factory=ContactDetailsSchema)
+    address: AddressDetailsSchema = Field(default_factory=AddressDetailsSchema)
+    occupation: Optional[str] = None
+    is_differently_abled: Optional[bool] = None
+    id_proof: Optional[IDProofSchema] = None
+    preferences: PreferencesSchema = Field(default_factory=PreferencesSchema)
+    consent_given: bool = False
+    declaration_accepted: bool = False
+    registration_id: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
 
 class RequestCreate(BaseModel):
     text: Optional[str] = None
@@ -37,7 +88,7 @@ class RequestResponse(BaseModel):
     sentiment: str
     translated_text: str
     original_text: str
-    confirmation_message: str
+    confirmation_message: Optional[str] = None
     confirmation_audio_url: Optional[str] = None
     photo_url: Optional[str] = None
     photo_analysis: Optional[PhotoAnalysisSchema] = None

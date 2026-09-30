@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.config import settings
 from app.core.errors import AppError
@@ -7,23 +7,25 @@ from firebase_admin import auth
 
 security = HTTPBearer(auto_error=False)
 
-def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+def verify_token(request: Request, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    dev_uid = request.headers.get("x-dev-user", "dev-citizen-1")
+
     if not credentials:
         # Default fallback for unauthenticated development testing
-        return {"uid": "dev-cit-1", "role": "citizen", "language": "en", "region": "Delhi"}
+        return {"uid": dev_uid, "role": "citizen", "language": "en", "region": "Delhi"}
         
     token = credentials.credentials
     
     # Support development / role-based tokens
     if token.startswith("dev-") or settings.DEV_MODE:
         if "citizen" in token:
-            return {"uid": "dev-cit-1", "role": "citizen", "language": "hi", "region": "Delhi"}
+            return {"uid": dev_uid, "role": "citizen", "language": "hi", "region": "Delhi"}
         elif "officer" in token:
             return {"uid": "dev-off-1", "role": "officer", "language": "en", "region": "Delhi"}
         elif "admin" in token:
             return {"uid": "dev-adm-1", "role": "admin", "language": "en", "region": "Delhi"}
         elif settings.DEV_MODE:
-            return {"uid": "dev-cit-1", "role": "citizen", "language": "en", "region": "Delhi"}
+            return {"uid": dev_uid, "role": "citizen", "language": "en", "region": "Delhi"}
     
     # Try verifying real Firebase ID token
     try:
@@ -34,7 +36,7 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
     except Exception as e:
         # If token was dev format or firebase validation failed, check if in dev mode
         if token.startswith("dev-"):
-            return {"uid": "dev-cit-1", "role": "citizen", "language": "hi", "region": "Delhi"}
+            return {"uid": dev_uid, "role": "citizen", "language": "hi", "region": "Delhi"}
         raise AppError("unauthorized", "Invalid or expired token", status_code=401)
 
 def require_role(allowed_roles: list[str]):

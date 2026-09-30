@@ -1,19 +1,112 @@
+let mockUser: any = null;
+let mockRequests = [
+  {
+    id: "req-123",
+    tracking_id: "TRACK-9876",
+    category: "water",
+    status: "received",
+    urgency: 4,
+    created_at: new Date().toISOString()
+  },
+  {
+    id: "req-124",
+    tracking_id: "TRACK-5432",
+    category: "roads",
+    status: "verified",
+    urgency: 3,
+    created_at: new Date(Date.now() - 86400000).toISOString()
+  }
+];
+
 export async function handleMockRequest(endpoint: string, options: RequestInit) {
-  // Add artificial delay to simulate network
   await new Promise(resolve => setTimeout(resolve, 800));
 
   if (endpoint === '/auth/session' && options.method === 'POST') {
+    const uid = options.headers && (options.headers as Headers).get('X-Dev-User') || "dev-citizen-1";
+    if (!mockUser) {
+      mockUser = {
+        uid,
+        role: "citizen",
+        profile_complete: false,
+        personal: {},
+        contact: { mobile: "9876543210" },
+        address: {},
+        preferences: {},
+        id_proof: {}
+      };
+    }
     return {
-      uid: "mock-uid-123",
-      role: localStorage.getItem('mock_role') || "citizen",
+      uid: mockUser.uid,
+      role: mockUser.role,
       language: "en",
       region: "Delhi"
     };
   }
 
-  if (endpoint === '/requests' && options.method === 'POST') {
+  if (endpoint === '/users/me') {
+    if (options.method === 'PATCH') {
+      const body = typeof options.body === 'string' ? JSON.parse(options.body) : {};
+      mockUser = { ...mockUser };
+      
+      if (body.personal) mockUser.personal = { ...mockUser.personal, ...body.personal };
+      if (body.contact) mockUser.contact = { ...mockUser.contact, ...body.contact };
+      if (body.address) mockUser.address = { ...mockUser.address, ...body.address };
+      if (body.preferences) mockUser.preferences = { ...mockUser.preferences, ...body.preferences };
+      if (body.id_proof !== undefined) mockUser.id_proof = body.id_proof;
+      
+      ['occupation', 'is_differently_abled', 'consent_given', 'declaration_accepted'].forEach(k => {
+        if (body[k] !== undefined) mockUser[k] = body[k];
+      });
+      
+      mockUser.profile_complete = !!(
+        mockUser.personal?.full_name && mockUser.personal?.dob && mockUser.address?.pincode &&
+        mockUser.consent_given && mockUser.declaration_accepted
+      );
+      
+      if (mockUser.profile_complete && !mockUser.registration_id) {
+        mockUser.registration_id = `JS-XX-2026-${Math.floor(Math.random() * 900000) + 100000}`;
+      }
+      return mockUser;
+    }
+    return mockUser || { uid: "dev-citizen-1", profile_complete: false, personal: {}, contact: {}, address: {}, preferences: {} };
+  }
+
+  if (endpoint === '/users/me/stats') {
     return {
-      id: "req-123",
+      total: mockRequests.length,
+      resolved: mockRequests.filter(r => r.status === 'completed' || r.status === 'verified').length,
+      pending: mockRequests.filter(r => r.status !== 'completed' && r.status !== 'verified').length,
+      by_category: [{ category: 'water', count: 1 }]
+    };
+  }
+
+  if (endpoint === '/regions') {
+    return {
+      states: [
+        {
+          name: "Bihar",
+          districts: [
+            { name: "Patna", blocks: ["Patna Rural", "Danapur", "Phulwari"] },
+            { name: "Gaya", blocks: ["Gaya Town", "Bodh Gaya"] }
+          ]
+        },
+        {
+          name: "Uttar Pradesh",
+          districts: [
+            { name: "Lucknow", blocks: ["Lucknow East", "Lucknow West"] }
+          ]
+        }
+      ]
+    };
+  }
+
+  if (endpoint.startsWith('/pincode/')) {
+    return { state: "Bihar", district: "Patna", block: "Patna Rural" };
+  }
+
+  if (endpoint === '/requests' && options.method === 'POST') {
+    const newReq = {
+      id: "req-" + Math.floor(Math.random() * 10000),
       tracking_id: "TRACK-" + Math.floor(Math.random() * 10000),
       category: "water",
       sub_issue: "pipe leak",
@@ -30,29 +123,15 @@ export async function handleMockRequest(endpoint: string, options: RequestInit) 
         confidence: 0.95
       },
       cluster_id: "cluster-456",
-      status: "received"
+      status: "received",
+      created_at: new Date().toISOString()
     };
+    mockRequests = [newReq, ...mockRequests];
+    return newReq;
   }
 
   if (endpoint === '/requests/mine' && (options.method === 'GET' || !options.method)) {
-    return [
-      {
-        id: "req-123",
-        tracking_id: "TRACK-9876",
-        category: "water",
-        status: "received",
-        urgency: 4,
-        created_at: new Date().toISOString()
-      },
-      {
-        id: "req-124",
-        tracking_id: "TRACK-5432",
-        category: "roads",
-        status: "verified",
-        urgency: 3,
-        created_at: new Date(Date.now() - 86400000).toISOString() // 1 day ago
-      }
-    ];
+    return mockRequests;
   }
 
   if (endpoint.startsWith('/requests/') && (options.method === 'GET' || !options.method)) {

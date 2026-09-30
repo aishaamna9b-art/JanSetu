@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from './auth/ProtectedRoute';
+import { RequireProfileComplete } from './auth/RequireProfileComplete';
 
 import Login from './pages/Login';
 
@@ -9,6 +10,9 @@ import SubmitRequest from './pages/citizen/SubmitRequest';
 import Confirmation from './pages/citizen/Confirmation';
 import MyRequests from './pages/citizen/MyRequests';
 import TrackRequest from './pages/citizen/TrackRequest';
+import Register from './pages/citizen/Register';
+import RegisterSuccess from './pages/citizen/RegisterSuccess';
+import Settings from './pages/citizen/Settings';
 
 // Officer
 import OfficerLayout from './components/OfficerLayout';
@@ -44,12 +48,20 @@ export const router = createBrowserRouter([
     element: <ProtectedRoute allowedRoles={['citizen']} />,
     children: [
       {
-        element: <CitizenLayout />,
+        element: <RequireProfileComplete />,
         children: [
-          { index: true, element: <SubmitRequest /> },
-          { path: 'confirmation/:id', element: <Confirmation /> },
-          { path: 'requests', element: <MyRequests /> },
-          { path: 'requests/:id', element: <TrackRequest /> },
+          { path: 'register', element: <Register /> },
+          { path: 'success', element: <RegisterSuccess /> },
+          {
+            element: <CitizenLayout />,
+            children: [
+              { index: true, element: <SubmitRequest /> },
+              { path: 'confirmation/:id', element: <Confirmation /> },
+              { path: 'requests', element: <MyRequests /> },
+              { path: 'requests/:id', element: <TrackRequest /> },
+              { path: 'settings', element: <Settings /> },
+            ]
+          }
         ]
       }
     ],

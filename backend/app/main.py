@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.api.v1 import auth, requests, analytics, recommendations, simulator, briefs, impact, admin, clusters
+from app.api.v1 import auth, requests, analytics, recommendations, simulator, briefs, impact, admin, clusters, users, regions
 from app.core.errors import AppError, app_error_handler
 from app.core.firebase import init_firebase
 
@@ -31,6 +31,8 @@ app.include_router(briefs.router, prefix=f"{settings.API_V1_STR}/briefs", tags=[
 app.include_router(impact.router, prefix=f"{settings.API_V1_STR}/impact", tags=["impact"])
 app.include_router(admin.router, prefix=f"{settings.API_V1_STR}/admin", tags=["admin"])
 app.include_router(clusters.router, prefix=f"{settings.API_V1_STR}/clusters", tags=["clusters"])
+app.include_router(users.router, prefix=f"{settings.API_V1_STR}/users", tags=["users"])
+app.include_router(regions.router, prefix=f"{settings.API_V1_STR}", tags=["regions"])
 
 @app.get("/health")
 def health_check():
