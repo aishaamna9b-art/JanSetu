@@ -1,21 +1,23 @@
 import uuid
-import numpy as np
 from app.core.firebase import get_db
 from app.services.scoring import calculate_priority_score
 
 SIMILARITY_THRESHOLD = 0.85
 
+import math
+
 def cosine_similarity(vec1: list[float], vec2: list[float]) -> float:
-    v1 = np.array(vec1)
-    v2 = np.array(vec2)
+    if len(vec1) != len(vec2):
+        return 0.0
     
-    norm1 = np.linalg.norm(v1)
-    norm2 = np.linalg.norm(v2)
+    dot_product = sum(a * b for a, b in zip(vec1, vec2))
+    norm1 = math.sqrt(sum(a * a for a in vec1))
+    norm2 = math.sqrt(sum(b * b for b in vec2))
     
     if norm1 == 0 or norm2 == 0:
         return 0.0
         
-    return np.dot(v1, v2) / (norm1 * norm2)
+    return dot_product / (norm1 * norm2)
 
 def assign_to_cluster(
     embedding: list[float], 
@@ -86,9 +88,9 @@ def assign_to_cluster(
         )
         
         # Update centroid by moving it slightly towards new point
-        old_centroid = np.array(best_cluster_data["centroid_embedding"])
-        new_emb = np.array(embedding)
-        new_centroid = ((old_centroid * (count - 1)) + new_emb) / count
+        old_centroid = best_cluster_data["centroid_embedding"]
+        new_emb = embedding
+        new_centroid = [((old * (count - 1)) + new) / count for old, new in zip(old_centroid, new_emb)]
         
         clusters_ref.document(best_cluster_id).update({
             "count": count,
@@ -96,7 +98,7 @@ def assign_to_cluster(
             "photo_severity_avg": new_photo_severity,
             "priority_score": score_res["score"],
             "score_breakdown": score_res["breakdown"],
-            "centroid_embedding": new_centroid.tolist()
+            "centroid_embedding": new_centroid
         })
         
         return best_cluster_id
