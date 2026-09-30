@@ -1,31 +1,35 @@
-import pandas as pd
+import csv
 from pathlib import Path
 from app.config import settings
 import math
 
-DATA_DIR = Path(__file__).parent.parent / "data" / "seed"
+DATA_DIR = Path(__file__).parent.parent / "data" / "datasets"
 
 def get_demographics(district: str, block: str):
-    if not (DATA_DIR / "demographics.csv").exists():
+    file_path = DATA_DIR / "demographics.csv"
+    if not file_path.exists():
         return {"population": 100000, "vulnerable_pop": 10000}
     
-    df = pd.read_csv(DATA_DIR / "demographics.csv")
-    match = df[(df["district"] == district) & (df["block"] == block)]
-    if not match.empty:
-        return {
-            "population": int(match.iloc[0]["population"]),
-            "vulnerable_pop": int(match.iloc[0]["vulnerable_pop"])
-        }
+    with open(file_path, 'r', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            if row.get("district") == district and row.get("block") == block:
+                return {
+                    "population": int(row["population"]),
+                    "vulnerable_pop": int(row["vulnerable_pop"])
+                }
     return {"population": 100000, "vulnerable_pop": 10000}
 
 def get_infra_index(district: str, block: str, category: str):
-    if not (DATA_DIR / "infra_index.csv").exists():
+    file_path = DATA_DIR / "infra_index.csv"
+    if not file_path.exists():
         return 0.5
         
-    df = pd.read_csv(DATA_DIR / "infra_index.csv")
-    match = df[(df["district"] == district) & (df["block"] == block) & (df["category"] == category)]
-    if not match.empty:
-        return float(match.iloc[0]["infra_index"])
+    with open(file_path, 'r', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            if row.get("district") == district and row.get("block") == block and row.get("category") == category:
+                return float(row["infra_index"])
     return 0.5
 
 def calculate_priority_score(

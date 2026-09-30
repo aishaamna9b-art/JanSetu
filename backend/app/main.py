@@ -14,13 +14,53 @@ app = FastAPI(
 
 app.add_exception_handler(AppError, app_error_handler)
 
+origins = [
+    "http://localhost:5173",
+]
+if settings.ALLOWED_ORIGINS:
+    origins.extend([o.strip() for o in settings.ALLOWED_ORIGINS.split(",") if o.strip()])
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.on_event("startup")
+def startup_event():
+    try:
+        from app.data.local_db import get_connection
+        conn = get_connection()
+        c = conn.cursor()
+        
+        # Check if demographics table exists (created by load_datasets)
+        c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='demographics'")
+        table_exists = c.fetchone()
+        
+        if not table_exists:
+            count = 0
+        else:
+            c.execute("SELECT COUNT(*) FROM demographics")
+            count = c.fetchone()[0]
+            
+        conn.close()
+        
+        if count == 0:
+            print("Database empty, running load datasets and seed logic...")
+            import sys
+            import os
+            # Ensure scripts directory is accessible
+            backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            if backend_dir not in sys.path:
+                sys.path.append(backend_dir)
+            from scripts.load_datasets import load_datasets
+            load_datasets()
+            from app.data.seed import main as seed_main
+            seed_main()
+    except Exception as e:
+        print(f"Error during startup seeding: {e}")
 
 app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["auth"])
 app.include_router(requests.router, prefix=f"{settings.API_V1_STR}/requests", tags=["requests"])
@@ -36,4 +76,4 @@ app.include_router(regions.router, prefix=f"{settings.API_V1_STR}", tags=["regio
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "dev_mode": settings.DEV_MODE}
+    return {"status": "ok"}

@@ -141,11 +141,16 @@ def main():
     init_firebase()
     db = get_db()
     if db:
-        print("Pushing to Firestore (this may take a minute)...")
-        batch = db.batch()
-        count = 0
-        
-        # We need to create clusters first
+        print("Checking if Firestore needs seeding...")
+        existing_reqs = list(db.collection("requests").limit(1).stream())
+        if existing_reqs:
+            print("Firestore already contains data. Skipping push to avoid duplicates.")
+        else:
+            print("Pushing to Firestore (this may take a minute)...")
+            batch = db.batch()
+            count = 0
+            
+            # We need to create clusters first
         for cluster_key, cluster_id in clusters.items():
             district, category = cluster_key.split("-")
             cluster_ref = db.collection("clusters").document(cluster_id)

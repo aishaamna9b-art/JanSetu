@@ -1,0 +1,9 @@
+This directory contains screenshots for the README.md gallery.
+
+Please add the following screenshots and name them exactly as listed:
+1. `login.png` - Showing the OTP-based authentication screen.
+2. `dashboard.png` - Showing the Policymaker Analytics & Hotspot Mapping view.
+3. `citizen_home.png` - Showing the Citizen home screen with Voice & Photo Issue Reporting.
+4. `gap_analysis.png` - Showing the Infra Gap Analysis view.
+5. `my_requests.png` - Showing the Request Tracking & Timeline view.
+6. `recommendations.png` - Showing the AI Recommendations & Budget Simulator view.

@@ -13,8 +13,17 @@ def init_firebase():
         
     try:
         cred_path = settings.FIREBASE_CREDENTIALS_PATH
+        cred_json = settings.FIREBASE_CREDENTIALS_JSON
+        cred = None
+
         if cred_path and os.path.exists(cred_path):
             cred = credentials.Certificate(cred_path)
+        elif cred_json:
+            import json
+            cred_dict = json.loads(cred_json)
+            cred = credentials.Certificate(cred_dict)
+
+        if cred:
             options = {
                 'storageBucket': 'jansetu-47534.firebasestorage.app'
             }

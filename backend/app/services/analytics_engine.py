@@ -1,8 +1,8 @@
-import pandas as pd
 import sqlite3
 import os
 from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
+from collections import defaultdict
 from app.core.firebase import get_db
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -11,14 +11,17 @@ DB_PATH = os.path.join(BASE_DIR, 'app', 'data', 'jansetu.db')
 class AnalyticsEngine:
     def __init__(self):
         self.conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+        self.conn.row_factory = sqlite3.Row
         
-    def _get_firestore_requests(self) -> pd.DataFrame:
+    def _get_firestore_requests(self) -> List[Dict[str, Any]]:
         db = get_db()
         if not db:
             try:
-                return pd.read_sql_query("SELECT * FROM requests", self.conn)
+                c = self.conn.cursor()
+                c.execute("SELECT * FROM requests")
+                return [dict(r) for r in c.fetchall()]
             except Exception:
-                return pd.DataFrame()
+                return []
             
         try:
             docs = db.collection("requests").stream()
@@ -35,98 +38,114 @@ class AnalyticsEngine:
                     'urgency': d.get('urgency'),
                     'district_code': d.get('district_code')
                 })
-            df = pd.DataFrame(records)
-            if df.empty:
+            if not records:
                 # Fallback to local DB if firestore is empty
-                return pd.read_sql_query("SELECT * FROM requests", self.conn)
-            return df
+                c = self.conn.cursor()
+                c.execute("SELECT * FROM requests")
+                return [dict(r) for r in c.fetchall()]
+            return records
         except Exception:
-            return pd.read_sql_query("SELECT * FROM requests", self.conn)
+            c = self.conn.cursor()
+            c.execute("SELECT * FROM requests")
+            return [dict(r) for r in c.fetchall()]
         
     def get_summary(self, state: Optional[str] = None, district: Optional[str] = None) -> Dict[str, Any]:
-        req_df = self._get_firestore_requests()
-        if req_df.empty:
+        records = self._get_firestore_requests()
+        if not records:
             return {"total": 0, "resolved_rate": 0.0, "top_categories": [], "by_status": {}, "trend": []}
             
-        if state:
-            if 'state' in req_df.columns:
-                req_df = req_df[req_df['state'] == state]
-            else:
-                pass # Can't filter by state easily if not in db
-        if district:
-            req_df = req_df[req_df['district'] == district]
+        filtered = []
+        for r in records:
+            if state and r.get('state') != state and r.get('state') is not None:
+                continue
+            if district and r.get('district') != district:
+                continue
+            filtered.append(r)
             
-        if req_df.empty:
+        if not filtered:
             return {"total": 0, "resolved_rate": 0.0, "top_categories": [], "by_status": {}, "trend": []}
             
-        status_counts = req_df['status'].value_counts().to_dict()
-        top_cats = req_df['category'].value_counts().head(5).to_dict()
-        top_categories = [{"category": k, "count": v} for k, v in top_cats.items()]
+        status_counts = defaultdict(int)
+        cat_counts = defaultdict(int)
+        
+        for r in filtered:
+            status_counts[r.get('status')] += 1
+            cat_counts[r.get('category')] += 1
+            
+        top_cats = sorted(cat_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+        top_categories = [{"category": k, "count": v} for k, v in top_cats]
         
         resolved = status_counts.get("completed", 0) + status_counts.get("funded", 0)
-        res_rate = resolved / len(req_df) if len(req_df) > 0 else 0.0
+        res_rate = resolved / len(filtered) if len(filtered) > 0 else 0.0
         
         return {
-            "total": len(req_df),
+            "total": len(filtered),
             "resolved_rate": res_rate,
             "top_categories": top_categories,
-            "by_status": status_counts,
-            "trend": [{"date": datetime.now(timezone.utc).isoformat()[:10], "count": len(req_df)}]
+            "by_status": dict(status_counts),
+            "trend": [{"date": datetime.now(timezone.utc).isoformat()[:10], "count": len(filtered)}]
         }
         
     def get_gaps(self, state: Optional[str] = None, district: Optional[str] = None) -> List[Dict[str, Any]]:
-        req_df = self._get_firestore_requests()
-        if req_df.empty:
+        records = self._get_firestore_requests()
+        if not records:
             return []
             
-        if state and 'state' in req_df.columns:
-            req_df = req_df[req_df['state'] == state]
+        filtered = []
+        for r in records:
+            if state and r.get('state') != state and r.get('state') is not None:
+                continue
+            if district and r.get('district') != district:
+                continue
+            filtered.append(r)
             
-        if district and 'district' in req_df.columns:
-            req_df = req_df[req_df['district'] == district]
-            
-        if req_df.empty:
+        if not filtered:
             return []
             
-        demand = req_df.groupby(['district', 'category']).size().reset_index(name='demand_count')
-        
+        demand = defaultdict(int)
+        for r in filtered:
+            if r.get('district') and r.get('category'):
+                demand[(r.get('district'), r.get('category'))] += 1
+                
+        c = self.conn.cursor()
         query = """
         SELECT d.district, i.category, i.index_score, d.population, p.allocated_cr, p.spent_cr
         FROM demographics d
         JOIN infra_index i ON d.district_code = i.district_code
         LEFT JOIN public_investment p ON d.district_code = p.district_code AND i.category = p.category
         """
-        infra_df = pd.read_sql_query(query, self.conn)
+        c.execute(query)
+        infra_rows = c.fetchall()
         
-        merged = pd.merge(demand, infra_df, on=['district', 'category'], how='inner')
-        merged = merged.fillna({
-            'population': 100000.0,
-            'allocated_cr': 0.0,
-            'spent_cr': 0.0,
-            'index_score': 0.5,
-        })
-        
-        results = []
-        for _, row in merged.iterrows():
-            demand_per_lakh = (row['demand_count'] / row['population']) * 100000
+        infra_dict = {}
+        for row in infra_rows:
+            infra_dict[(row['district'], row['category'])] = dict(row)
             
-            allocated = row['allocated_cr']
-            if pd.isna(allocated) or allocated <= 0:
+        results = []
+        for (dist, cat), demand_count in demand.items():
+            infra = infra_dict.get((dist, cat), {})
+            
+            pop = float(infra.get('population') or 100000.0)
+            allocated = float(infra.get('allocated_cr') or 0.0)
+            spent = float(infra.get('spent_cr') or 0.0)
+            infra_idx = float(infra.get('index_score') or 0.5)
+            
+            demand_per_lakh = (demand_count / pop) * 100000
+            
+            if allocated <= 0:
                 spend_ratio = 0
             else:
-                spend_ratio = row['spent_cr'] / allocated
+                spend_ratio = spent / allocated
                 
-            infra_idx = row['index_score']
-            
             gap_score = demand_per_lakh * (1 - infra_idx) * (1 - spend_ratio)
             
             results.append({
-                "district": row['district'],
-                "category": row['category'],
-                "demand_count": int(row['demand_count']),
-                "infra_index": float(infra_idx),
-                "population": float(row['population']), # Added to fix KeyError
-                "spending": {"allocated_cr": float(allocated) if not pd.isna(allocated) else 0.0, "spent_cr": float(row['spent_cr']) if not pd.isna(row['spent_cr']) else 0.0},
+                "district": dist,
+                "category": cat,
+                "demand_count": int(demand_count),
+                "infra_index": infra_idx,
+                "population": pop,
+                "spending": {"allocated_cr": allocated, "spent_cr": spent},
                 "gap_score": float(gap_score)
             })
             
@@ -146,8 +165,9 @@ class AnalyticsEngine:
 
     def get_data_sources(self) -> List[Dict[str, Any]]:
         try:
-            df = pd.read_sql_query("SELECT * FROM dataset_metadata", self.conn)
-            return df.to_dict('records')
+            c = self.conn.cursor()
+            c.execute("SELECT * FROM dataset_metadata")
+            return [dict(r) for r in c.fetchall()]
         except Exception:
             return []
             
@@ -155,7 +175,6 @@ class AnalyticsEngine:
         gaps = self.get_gaps(state=state, district=district)
         recs = []
         for i, g in enumerate(gaps):
-            
             pop = g.get("population", 100000)
             gap_pct = 1 - g["infra_index"]
             people_served = int(pop * gap_pct)
@@ -196,24 +215,28 @@ class AnalyticsEngine:
         return recs
 
     def get_impact(self, state: Optional[str] = None, district: Optional[str] = None) -> List[Dict[str, Any]]:
-        req_df = self._get_firestore_requests()
-        if req_df.empty:
+        records = self._get_firestore_requests()
+        if not records:
             return []
             
         if district:
-            req_df = req_df[req_df['district'] == district]
+            records = [r for r in records if r.get('district') == district]
             
-        if req_df.empty:
+        if not records:
             return []
             
-        req_df['district'] = req_df['district'].fillna('Unknown')
-        districts = req_df['district'].unique()
-        results = []
+        dist_stats = defaultdict(lambda: {"raised": 0, "resolved": 0})
         
-        for d in districts:
-            d_df = req_df[req_df['district'] == d]
-            raised = len(d_df)
-            resolved = len(d_df[d_df['status'] == 'completed'])
+        for r in records:
+            d = r.get('district') or 'Unknown'
+            dist_stats[d]["raised"] += 1
+            if r.get('status') == 'completed':
+                dist_stats[d]["resolved"] += 1
+                
+        results = []
+        for d, stats in dist_stats.items():
+            raised = stats["raised"]
+            resolved = stats["resolved"]
             res_rate = resolved / raised if raised > 0 else 0.0
             
             results.append({
