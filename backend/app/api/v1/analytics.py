@@ -12,8 +12,8 @@ def get_analytics_summary(
     district: Optional[str] = Query(None),
     current_user: dict = Depends(require_role(["officer", "admin"]))
 ):
-    # Pass state and district to engine if implemented, for now engine handles all
-    res = analytics_engine.get_summary()
+    # Pass state and district to engine 
+    res = analytics_engine.get_summary(state=state, district=district)
     return AnalyticsSummaryResponse(
         total_requests=res["total"],
         resolved_rate=res["resolved_rate"],
@@ -29,11 +29,10 @@ def get_analytics_hotspots(
     category: Optional[str] = Query(None),
     current_user: dict = Depends(require_role(["officer", "admin"]))
 ):
-    hotspots = analytics_engine.get_hotspots()
+    hotspots = analytics_engine.get_hotspots(state=state, district=district)
     # Mock some data for missing fields expected by schema
     results = []
     for i, h in enumerate(hotspots):
-        if district and h["district"] != district: continue
         if category and h["category"] != category: continue
         
         results.append(HotspotResponse(
@@ -51,13 +50,13 @@ def get_analytics_hotspots(
 
 @router.get("/gaps", response_model=List[GapAnalysisResponse])
 def get_gap_analysis(
+    state: Optional[str] = Query(None),
     district: Optional[str] = Query(None),
     current_user: dict = Depends(require_role(["officer", "admin"]))
 ):
-    gaps = analytics_engine.get_gaps()
+    gaps = analytics_engine.get_gaps(state=state, district=district)
     results = []
     for g in gaps:
-        if district and g["district"] != district: continue
         
         results.append(GapAnalysisResponse(
             district=g["district"],

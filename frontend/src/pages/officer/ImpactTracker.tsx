@@ -17,10 +17,16 @@ export default function ImpactTracker() {
     queryFn: () => fetchWithAuth('/impact')
   });
 
-  const chartData = (data || []).map(d => ({
+  const allData = (data || []).map(d => ({
     ...d,
     rate: Math.round(d.resolution_rate * 100)
   }));
+
+  // Take top 15 districts by volume for charts to prevent UI congestion
+  const chartData = [...allData].sort((a, b) => b.raised - a.raised).slice(0, 15);
+  
+  // Full data sorted by rate for the table
+  const tableData = [...allData].sort((a, b) => b.rate - a.rate);
 
   if (isLoading) {
     return (
@@ -80,15 +86,15 @@ export default function ImpactTracker() {
           <h3 className="text-lg font-bold mb-6 text-[#1B1F3B] dark:text-white font-serif relative z-10">Raised vs Resolved</h3>
           <div className="h-80 relative z-10">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+              <BarChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 40 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-[#1B1F3B]/10 dark:text-white/10" vertical={false} />
-                <XAxis dataKey="district" stroke="#F28C28" tick={{fill: '#F28C28', opacity: 1, fontSize: 12}} className="font-mono" tickLine={false} axisLine={false} />
+                <XAxis dataKey="district" stroke="#F28C28" tick={{fill: '#F28C28', opacity: 1, fontSize: 11}} className="font-mono" tickLine={false} axisLine={false} angle={-45} textAnchor="end" height={80} />
                 <YAxis stroke="#F28C28" tick={{fill: '#F28C28', opacity: 1, fontSize: 12}} className="font-mono" tickLine={false} axisLine={false} />
                 <RechartsTooltip 
                   cursor={{ fill: 'rgba(27, 31, 59, 0.05)' }}
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', backgroundColor: 'var(--color-primary-50)', color: 'var(--color-ink)' }}
                 />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', fontWeight: 'bold' }} />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', fontWeight: 'bold', paddingTop: '20px' }} />
                 <Bar dataKey="resolved" stackId="a" name="Resolved" fill="#1E7B4F" radius={[0, 0, 0, 0]} barSize={30} />
                 <Bar dataKey="raised" stackId="a" name="Raised (Pending)" fill="#1B1F3B" radius={[4, 4, 0, 0]} barSize={30} />
               </BarChart>
@@ -100,14 +106,14 @@ export default function ImpactTracker() {
           <h3 className="text-lg font-bold mb-6 text-[#1B1F3B] dark:text-white font-serif relative z-10">Resolution Velocity</h3>
           <div className="h-80 relative z-10">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+              <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 40 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-[#1B1F3B]/10 dark:text-white/10" vertical={false} />
-                <XAxis dataKey="district" stroke="#F28C28" tick={{fill: '#F28C28', opacity: 1, fontSize: 12}} className="font-mono" tickLine={false} axisLine={false} />
+                <XAxis dataKey="district" stroke="#F28C28" tick={{fill: '#F28C28', opacity: 1, fontSize: 11}} className="font-mono" tickLine={false} axisLine={false} angle={-45} textAnchor="end" height={80} />
                 <YAxis stroke="#F28C28" tick={{fill: '#F28C28', opacity: 1, fontSize: 12}} className="font-mono" domain={[0, 100]} tickLine={false} axisLine={false} />
                 <RechartsTooltip 
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', backgroundColor: 'var(--color-primary-50)', color: 'var(--color-ink)' }}
                 />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', fontWeight: 'bold' }} />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', fontWeight: 'bold', paddingTop: '20px' }} />
                 <Line type="monotone" dataKey="rate" name="Resolution Rate %" stroke="#F28C28" strokeWidth={4} dot={{ r: 6, fill: '#F28C28', strokeWidth: 0 }} activeDot={{ r: 8 }} />
               </LineChart>
             </ResponsiveContainer>
@@ -132,7 +138,7 @@ export default function ImpactTracker() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#1B1F3B]/5 dark:divide-white/5">
-              {[...chartData].sort((a, b) => b.rate - a.rate).map((data, index) => (
+              {tableData.map((data, index) => (
                 <tr key={data.district} className="hover:bg-[#1B1F3B]/5 dark:hover:bg-white/5 transition-colors group">
                   <td className="p-4 font-bold text-[#1B1F3B] dark:text-white flex items-center gap-2">
                     {index === 0 && <span className="text-xl" title="1st Place">🥇</span>}
