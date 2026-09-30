@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Camera, Send, Mic, Square, Check } from 'lucide-react';
 import { fetchWithAuth } from '../../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { LanguageSelector } from '../../components/LanguageSelector';
 
 const PIPELINE_STEPS = ["Listening", "Understanding", "Routing to your district"];
@@ -11,6 +12,7 @@ const PIPELINE_STEPS = ["Listening", "Understanding", "Routing to your district"
 const SubmitRequest: React.FC = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [text, setText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
@@ -29,6 +31,11 @@ const SubmitRequest: React.FC = () => {
   const animationFrameRef = useRef<number | null>(null);
 
   const [audioLevel, setAudioLevel] = useState(0);
+
+  const { data: profile } = useQuery({
+    queryKey: ['my-profile'],
+    queryFn: () => fetchWithAuth('/users/me'),
+  });
 
   const startVisualizer = (stream: MediaStream) => {
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -96,6 +103,7 @@ const SubmitRequest: React.FC = () => {
       
       clearInterval(interval);
       setPipelineStep(2);
+      queryClient.invalidateQueries({ queryKey: ['my-requests'] });
       setStatus('done');
       
       setTimeout(() => {
@@ -230,8 +238,19 @@ const SubmitRequest: React.FC = () => {
       
       <div className="w-full flex justify-between items-center mb-10 relative z-10">
         <div>
-          <h1 className="text-4xl font-serif font-bold text-ink tracking-tight">{t('submit')}</h1>
-          <p className="text-ink/60 font-sans mt-1">Speak or type your concern</p>
+          <h1 className="text-4xl font-serif font-bold text-ink tracking-tight">
+            {profile?.personal?.full_name ? `Welcome, ${profile.personal.full_name}` : t('submit')}
+          </h1>
+          {profile?.registration_id ? (
+            <div className="flex items-center space-x-2 mt-2">
+              <span className="text-xs font-bold text-blue-700 bg-blue-100 px-2 py-1 rounded-full uppercase tracking-wider">
+                ID: {profile.registration_id}
+              </span>
+              <span className="text-ink/60 font-sans text-sm">{profile?.address?.district} District</span>
+            </div>
+          ) : (
+            <p className="text-ink/60 font-sans mt-1">Speak or type your concern</p>
+          )}
         </div>
         <LanguageSelector />
       </div>

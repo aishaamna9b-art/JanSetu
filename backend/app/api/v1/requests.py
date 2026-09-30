@@ -33,6 +33,13 @@ async def create_request(
 ):
     original_text = text or ""
     
+    user_doc = local_db.get_user(current_user["uid"])
+    if user_doc:
+        address = user_doc.get("address", {})
+        state = state or address.get("state")
+        district = district or address.get("district")
+        block = block or address.get("block")
+    
     if audio:
         try:
             upload_file_to_storage(audio, folder="audio")

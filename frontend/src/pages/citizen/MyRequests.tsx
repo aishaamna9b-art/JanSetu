@@ -23,6 +23,11 @@ const MyRequests: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
+  const { data: profile } = useQuery({
+    queryKey: ['my-profile'],
+    queryFn: () => fetchWithAuth('/users/me'),
+  });
+
   const { data: requests, isLoading } = useQuery({
     queryKey: ['my-requests'],
     queryFn: () => fetchWithAuth('/requests/mine'),
@@ -59,8 +64,20 @@ const MyRequests: React.FC = () => {
             <FileText className="text-primary-600" size={24} />
           </div>
           <div>
-            <h1 className="text-3xl font-serif font-bold text-ink">{t('my_requests')}</h1>
-            <p className="text-ink/60 font-sans text-sm">Track the progress of your submissions</p>
+            <h1 className="text-3xl font-serif font-bold text-ink">
+              {profile?.personal?.full_name ? `Welcome, ${profile.personal.full_name}` : t('my_requests')}
+            </h1>
+            {profile?.registration_id && (
+              <div className="flex items-center space-x-2 mt-1">
+                <span className="text-xs font-bold text-blue-700 bg-blue-100 px-2 py-1 rounded-full uppercase tracking-wider">
+                  ID: {profile.registration_id}
+                </span>
+                <span className="text-ink/60 font-sans text-sm">{profile?.address?.district} District</span>
+              </div>
+            )}
+            {!profile?.registration_id && (
+              <p className="text-ink/60 font-sans text-sm">Track the progress of your submissions</p>
+            )}
           </div>
         </div>
         

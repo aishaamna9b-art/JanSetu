@@ -65,12 +65,43 @@ def init_tables():
         created_at TEXT
     );
     """)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        uid TEXT PRIMARY KEY,
+        profile_data TEXT NOT NULL,
+        created_at TEXT
+    );
+    """)
     
     conn.commit()
     conn.close()
 
 # Initialize tables immediately upon import
 init_tables()
+
+def save_user(uid: str, profile_doc: Dict[str, Any]):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+    INSERT OR REPLACE INTO users (uid, profile_data, created_at)
+    VALUES (?, ?, ?)
+    """, (
+        uid,
+        json.dumps(profile_doc),
+        profile_doc.get("created_at") or datetime.now(timezone.utc).isoformat()
+    ))
+    conn.commit()
+    conn.close()
+
+def get_user(uid: str) -> Optional[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT profile_data FROM users WHERE uid = ?", (uid,))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return json.loads(row["profile_data"])
+    return None
 
 def save_request(req_doc: Dict[str, Any]):
     conn = get_connection()

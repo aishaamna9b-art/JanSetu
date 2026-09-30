@@ -24,6 +24,11 @@ export async function fetchWithAuth(endpoint: string, options: RequestInit = {})
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
+  
+  const devUser = localStorage.getItem('mock_dev_user');
+  if (devUser) {
+    headers.set('X-Dev-User', devUser);
+  }
 
   // Set default content type if not provided and not FormData
   if (!(options.body instanceof FormData) && !headers.has('Content-Type')) {
