@@ -14,8 +14,10 @@ def run_budget_simulator(
     recs = analytics_engine.get_recommendations(district=request.district, limit=50)
     
     candidates = []
+    lower_req_cats = [c.lower() for c in request.categories] if request.categories else []
+    
     for r in recs:
-        if request.categories and r["category"] not in request.categories:
+        if lower_req_cats and r["category"].lower() not in lower_req_cats:
             continue
             
         rec = ProjectRecommendation(**r)

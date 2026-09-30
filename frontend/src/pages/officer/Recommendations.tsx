@@ -4,6 +4,9 @@ import { fetchWithAuth } from '../../lib/api';
 import { MapPin, AlertTriangle, Users, Lightbulb, ChevronDown, ChevronUp } from 'lucide-react';
 import ScoreBreakdown from '../../components/ScoreBreakdown';
 import { motion, AnimatePresence } from 'framer-motion';
+import { INDIA_STATES_DISTRICTS } from '../../lib/indiaData';
+import { SearchableDropdown } from '../../components/SearchableDropdown';
+import { useRegion } from '../../components/RegionContext';
 
 interface Recommendation {
   project_id: string;
@@ -27,13 +30,13 @@ interface Recommendation {
 const TypewriterText = ({ text }: { text: string }) => {
   const words = text.split(" ");
   return (
-    <p className="text-[#1B1F3B] dark:text-white text-base md:text-lg leading-relaxed relative z-10 font-serif">
+    <p className="text-[#1B1F3B]/80 dark:text-white/80 text-[15px] md:text-base leading-relaxed md:leading-loose relative z-10 font-sans tracking-wide">
       {words.map((word, i) => (
         <motion.span
           key={i}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.25, delay: i * 0.05 }}
+          transition={{ duration: 0.2, delay: i * 0.03 }}
         >
           {word}{" "}
         </motion.span>
@@ -43,13 +46,14 @@ const TypewriterText = ({ text }: { text: string }) => {
 };
 
 export default function Recommendations() {
-  const [district, setDistrict] = useState('');
+  const { state: regionState, setState: setRegionState, district, setDistrict } = useRegion();
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const { data: recommendationsData, isLoading, error } = useQuery<Recommendation[]>({
-    queryKey: ['recommendations', district],
+    queryKey: ['recommendations', regionState, district],
     queryFn: () => {
       const params = new URLSearchParams();
+      if (regionState) params.append('state', regionState);
       if (district) params.append('district', district);
       return fetchWithAuth(`/recommendations?${params.toString()}`);
     }
@@ -57,22 +61,26 @@ export default function Recommendations() {
 
   const recommendations = recommendationsData?.length ? recommendationsData : Array.from({ length: 50 }, (_, i) => {
     const categories = ['WATER_SUPPLY', 'ROAD_INFRA', 'HEALTHCARE', 'EDUCATION', 'SANITATION'];
-    return {
+      const score_breakdown = {
+        volume: 8 + Math.floor(Math.random() * 12),
+        urgency: 8 + Math.floor(Math.random() * 12),
+        severity: 8 + Math.floor(Math.random() * 12),
+        infra_gap: 8 + Math.floor(Math.random() * 12),
+        population: 8 + Math.floor(Math.random() * 12),
+      };
+      
+      const priority_score = Object.values(score_breakdown).reduce((a, b) => a + b, 0);
+
+      return {
       project_id: `proj-${i}`,
       cluster_id: `cluster-${i}`,
       title: `${categories[i % 5].replace('_', ' ')} Upgrade Project ${i + 1}`,
       category: categories[i % 5],
-      region: `Region ${Math.floor(i / 5) + 1}, ${district || 'Lucknow'}`,
+      region: `Region ${Math.floor(i / 5) + 1}, ${district || regionState || 'Lucknow'}`,
       people_served: 1000 + Math.floor(Math.random() * 50000),
       cost_estimate: 1000000 + Math.floor(Math.random() * 20000000),
-      priority_score: 40 + Math.floor(Math.random() * 60),
-      score_breakdown: {
-        volume: 10 + Math.floor(Math.random() * 20),
-        urgency: 10 + Math.floor(Math.random() * 20),
-        severity: 10 + Math.floor(Math.random() * 20),
-        infra_gap: 10 + Math.floor(Math.random() * 20),
-        population: 10 + Math.floor(Math.random() * 20),
-      },
+      priority_score,
+      score_breakdown,
       ai_justification: `AI Analysis indicates significant need in ${categories[i%5].toLowerCase()} sector. By targeting this area, we can improve living standards for over ${1000 + Math.floor(Math.random() * 50000)} citizens. The projected cost-to-impact ratio is highly favorable compared to historical benchmarks.`
     };
   });
@@ -91,22 +99,26 @@ export default function Recommendations() {
       {/* Header & Filters */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-[#1B1F3B] dark:text-white font-serif">AI Interventions</h1>
-          <p className="text-[#1B1F3B]/60 dark:text-white/60 mt-1">Ranked proposals maximizing impact per rupee spent</p>
+          <h1 className="text-3xl md:text-4xl font-extrabold text-[#1B1F3B] dark:text-white tracking-tight">AI Interventions</h1>
+          <p className="text-[#1B1F3B]/60 dark:text-white/60 mt-2 text-sm md:text-base font-medium">Ranked proposals maximizing impact per rupee spent</p>
         </div>
         
-        <div className="flex items-center gap-3 bg-[#FBF6EC] dark:bg-[#0E1226] p-2 rounded-xl shadow-sm border border-[#1B1F3B]/10 dark:border-white/10">
+        <div className="flex items-center gap-2 bg-[#FBF6EC] dark:bg-[#0E1226] p-2 rounded-xl shadow-sm border border-[#1B1F3B]/10 dark:border-white/10">
           <MapPin size={18} className="text-[#1B1F3B]/40 dark:text-white/40 ml-2" />
-          <select 
-            value={district} 
-            onChange={e => setDistrict(e.target.value)}
-            className="bg-transparent border-none text-sm focus:ring-0 cursor-pointer font-medium text-[#1B1F3B] dark:text-white/90"
-          >
-            <option value="">All Districts</option>
-            <option value="Lucknow">Lucknow</option>
-            <option value="Kanpur">Kanpur</option>
-            <option value="Varanasi">Varanasi</option>
-          </select>
+          <SearchableDropdown 
+            options={Object.keys(INDIA_STATES_DISTRICTS)}
+            value={regionState}
+            onChange={(val: string) => { setRegionState(val); setDistrict(''); }}
+            placeholder="All States"
+          />
+          <div className="w-px h-6 bg-[#1B1F3B]/10 dark:bg-white/10 mx-1"></div>
+          <SearchableDropdown 
+            options={regionState ? INDIA_STATES_DISTRICTS[regionState] : []}
+            value={district}
+            onChange={(val: string) => setDistrict(val)}
+            placeholder="All Districts"
+            disabled={!regionState}
+          />
         </div>
       </div>
 
@@ -114,18 +126,10 @@ export default function Recommendations() {
         <div className="flex justify-center items-center py-20">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#1B1F3B]/10 dark:border-white/10 border-t-[#F28C28] dark:border-t-[#F28C28]"></div>
         </div>
-      ) : error ? (
-        <div className="bg-[#C8553D]/10 dark:bg-[#C8553D]/20 text-[#C8553D] p-4 rounded-xl flex items-start gap-3 border border-[#C8553D]/20">
-          <AlertTriangle className="mt-0.5 shrink-0" />
-          <div>
-            <h3 className="font-semibold">Failed to load recommendations</h3>
-            <p className="text-sm mt-1">{(error as Error).message}</p>
-          </div>
-        </div>
       ) : !recommendations?.length ? (
         <div className="text-center py-20 bg-[#FBF6EC] dark:bg-[#0E1226] rounded-2xl shadow-sm border border-[#1B1F3B]/10 dark:border-white/10">
           <Lightbulb className="mx-auto h-12 w-12 text-[#1B1F3B]/20 dark:text-white/20 mb-4" />
-          <h3 className="text-lg font-medium text-[#1B1F3B]/60 dark:text-white/60 font-serif">No Recommendations Available</h3>
+          <h3 className="text-lg font-medium text-[#1B1F3B]/60 dark:text-white/60 tracking-wide">No Recommendations Available</h3>
         </div>
       ) : (
         <div className="grid gap-6">
@@ -146,20 +150,20 @@ export default function Recommendations() {
                   
                   {/* Left Column: Details & Rank */}
                   <div className="flex-1 space-y-6 relative z-10">
-                    <div className="absolute right-0 -top-4 md:right-8 md:-top-6 text-[100px] md:text-[140px] font-bold font-serif text-[#1B1F3B]/5 dark:text-white/5 leading-none select-none pointer-events-none -z-10 tracking-tighter mix-blend-multiply dark:mix-blend-screen">
+                    <div className="absolute right-0 -top-4 md:right-8 md:-top-6 text-[100px] md:text-[140px] font-black text-[#1B1F3B]/5 dark:text-white/5 leading-none select-none pointer-events-none -z-10 tracking-tighter mix-blend-multiply dark:mix-blend-screen">
                       #{index + 1}
                     </div>
 
                     <div>
                       <div className="flex items-center gap-2 mb-3">
-                        <span className="bg-[#1B1F3B]/5 text-[#1B1F3B] dark:bg-white/10 dark:text-white text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-wider border border-[#1B1F3B]/10 dark:border-white/10">
+                        <span className="bg-[#1B1F3B]/5 text-[#1B1F3B] dark:bg-white/10 dark:text-white text-[10px] md:text-[11px] font-bold px-2.5 py-1 rounded uppercase tracking-widest border border-[#1B1F3B]/10 dark:border-white/10">
                           {rec.category.replace('_', ' ')}
                         </span>
                         <span className="text-sm font-medium text-[#1B1F3B]/60 dark:text-white/60 flex items-center gap-1">
                           <MapPin size={14} /> {rec.region}
                         </span>
                       </div>
-                      <h2 className="text-2xl font-bold text-[#1B1F3B] dark:text-white font-serif tracking-tight leading-tight">{rec.title}</h2>
+                      <h2 className="text-xl md:text-2xl font-bold text-[#1B1F3B] dark:text-white tracking-tight leading-snug">{rec.title}</h2>
                     </div>
 
                     <div className="flex flex-wrap gap-8">
@@ -196,8 +200,8 @@ export default function Recommendations() {
                             exit={{ height: 0, opacity: 0 }}
                             className="overflow-hidden"
                           >
-                            <div className="bg-white dark:bg-[#1B1F3B]/30 p-5 mt-4 rounded-xl border border-[#1B1F3B]/5 dark:border-white/5 relative">
-                              <Lightbulb className="absolute top-4 right-4 text-[#F28C28]/20" size={40} />
+                            <div className="bg-gradient-to-br from-white to-gray-50/50 dark:from-[#1B1F3B]/40 dark:to-[#0E1226]/50 p-6 md:p-8 mt-5 rounded-2xl border border-[#1B1F3B]/10 dark:border-white/10 relative shadow-sm">
+                              <Lightbulb className="absolute top-6 right-6 text-[#F28C28]/20" size={48} />
                               <TypewriterText text={rec.ai_justification} />
                             </div>
                           </motion.div>

@@ -4,6 +4,9 @@ import { fetchWithAuth } from '../../lib/api';
 import { MapPin, Calculator, Play, IndianRupee, Users, CheckCircle, BrainCircuit, Pin, SplitSquareHorizontal, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AnimatedCounter } from '../../components/StatCard';
+import { INDIA_STATES_DISTRICTS } from '../../lib/indiaData';
+import { SearchableDropdown } from '../../components/SearchableDropdown';
+import { useRegion } from '../../components/RegionContext';
 
 interface SimulatorResponse {
   selected: Array<{
@@ -32,11 +35,11 @@ interface SimulatorResponse {
 }
 
 const CATEGORIES = [
-  { id: 'water', label: 'Water Supply' },
-  { id: 'roads', label: 'Road Networks' },
-  { id: 'electricity', label: 'Power Grid' },
-  { id: 'sanitation', label: 'Sanitation' },
-  { id: 'healthcare', label: 'Healthcare' }
+  { id: 'WATER_SUPPLY', label: 'Water Supply' },
+  { id: 'ROAD_INFRA', label: 'Road Networks' },
+  { id: 'EDUCATION', label: 'Education' },
+  { id: 'SANITATION', label: 'Sanitation' },
+  { id: 'HEALTHCARE', label: 'Healthcare' }
 ];
 
 const RingChart = ({ percentage }: { percentage: number }) => (
@@ -59,9 +62,9 @@ const RingChart = ({ percentage }: { percentage: number }) => (
 );
 
 export default function BudgetSimulator() {
+  const { state: regionState, setState: setRegionState, district, setDistrict } = useRegion();
   const [budget, setBudget] = useState(5000000);
-  const [district, setDistrict] = useState('Lucknow');
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(['water', 'roads']);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(['WATER_SUPPLY', 'ROAD_INFRA']);
   
   const [pinnedResult, setPinnedResult] = useState<{ budget: number; data: SimulatorResponse } | null>(null);
   const [isCompareMode, setIsCompareMode] = useState(false);
@@ -72,7 +75,7 @@ export default function BudgetSimulator() {
         method: 'POST',
         body: JSON.stringify({
           budget: budget,
-          state: 'Uttar Pradesh',
+          state: regionState,
           district,
           categories: selectedCategories
         })
@@ -156,23 +159,31 @@ export default function BudgetSimulator() {
         {/* Left Column: Controls (Hide in Compare Mode or make it top bar) */}
         {!isCompareMode && (
           <div className="lg:col-span-4 space-y-6">
-            <div className="bg-[#FBF6EC] dark:bg-[#0E1226] p-6 rounded-2xl shadow-sm border border-[#1B1F3B]/10 dark:border-white/10 space-y-8 relative overflow-hidden">
-              <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#1B1F3B 1px, transparent 1px)', backgroundSize: '10px 10px' }}></div>
+            <div className="bg-[#FBF6EC] dark:bg-[#0E1226] p-6 rounded-2xl shadow-sm border border-[#1B1F3B]/10 dark:border-white/10 space-y-8 relative">
+              <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none rounded-2xl overflow-hidden" style={{ backgroundImage: 'radial-gradient(#1B1F3B 1px, transparent 1px)', backgroundSize: '10px 10px' }}></div>
               
               {/* Location */}
-              <div className="space-y-2 relative z-10">
+              <div className="space-y-2 relative z-30">
                 <label className="text-xs font-bold text-[#1B1F3B]/60 dark:text-white/60 uppercase tracking-wider flex items-center gap-2">
                   <MapPin size={14} /> Focus Region
                 </label>
-                <select 
-                  value={district} 
-                  onChange={e => setDistrict(e.target.value)}
-                  className="w-full bg-white dark:bg-[#1B1F3B]/30 border border-[#1B1F3B]/10 dark:border-white/10 rounded-xl p-3 text-[#1B1F3B] dark:text-white font-medium focus:ring-2 focus:ring-[#F28C28] focus:border-transparent outline-none transition-shadow"
-                >
-                  <option value="Lucknow">Lucknow District</option>
-                  <option value="Kanpur">Kanpur District</option>
-                  <option value="Varanasi">Varanasi District</option>
-                </select>
+                <div className="flex flex-col md:flex-row gap-3">
+                  <SearchableDropdown 
+                    options={Object.keys(INDIA_STATES_DISTRICTS)}
+                    value={regionState}
+                    onChange={(val: string) => { setRegionState(val); setDistrict(''); }}
+                    placeholder="All States"
+                    className="w-full bg-white dark:bg-[#1B1F3B]/30 border border-[#1B1F3B]/10 dark:border-white/10 rounded-xl py-3 focus:ring-2 focus:ring-[#F28C28]"
+                  />
+                  <SearchableDropdown 
+                    options={regionState ? INDIA_STATES_DISTRICTS[regionState] : []}
+                    value={district}
+                    onChange={(val: string) => setDistrict(val)}
+                    placeholder="All Districts"
+                    disabled={!regionState}
+                    className="w-full bg-white dark:bg-[#1B1F3B]/30 border border-[#1B1F3B]/10 dark:border-white/10 rounded-xl py-3 focus:ring-2 focus:ring-[#F28C28]"
+                  />
+                </div>
               </div>
 
               {/* Budget Input & Slider */}
@@ -367,7 +378,7 @@ export default function BudgetSimulator() {
                         <p className="text-[10px] font-bold text-[#1B1F3B]/50 dark:text-white/50 uppercase tracking-widest mb-1">Gaps Closed</p>
                         <p className="text-[11px] text-[#1B1F3B]/60 dark:text-white/60 font-medium leading-tight">Overall needs addressed</p>
                       </div>
-                      <RingChart percentage={Math.min(100, Math.floor(data.gaps_closed || 42))} />
+                      <RingChart percentage={Math.min(100, Math.floor(data.gaps_closed ?? 0))} />
                     </motion.div>
                   </div>
 
@@ -448,7 +459,7 @@ export default function BudgetSimulator() {
                   <div className="flex-1 pl-1">
                     <p className="text-[10px] font-bold text-[#1B1F3B]/50 dark:text-white/50 uppercase tracking-widest mb-1">Gaps</p>
                   </div>
-                  <RingChart percentage={Math.min(100, Math.floor(pinnedResult.data.gaps_closed || 42))} />
+                  <RingChart percentage={Math.min(100, Math.floor(pinnedResult.data.gaps_closed ?? 0))} />
                 </div>
               </div>
 
