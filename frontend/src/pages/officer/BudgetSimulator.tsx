@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { fetchWithAuth } from '../../lib/api';
-import { MapPin, Calculator, Play, IndianRupee, Users, CheckCircle, BrainCircuit, Activity, Pin, SplitSquareHorizontal, Sparkles } from 'lucide-react';
+import { MapPin, Calculator, Play, IndianRupee, Users, CheckCircle, BrainCircuit, Pin, SplitSquareHorizontal, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AnimatedCounter } from '../../components/StatCard';
 
@@ -120,7 +120,7 @@ export default function BudgetSimulator() {
 
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+    show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 300, damping: 24 } }
   };
 
   return (
@@ -379,7 +379,7 @@ export default function BudgetSimulator() {
                     </h3>
                     <div className="space-y-4">
                       <AnimatePresence>
-                        {(data.selected || []).map((project: any, idx: number) => (
+                        {(data.selected || []).map((project: any) => (
                           <motion.div 
                             key={project.cluster_id} 
                             layout

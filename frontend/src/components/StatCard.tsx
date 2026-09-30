@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { motion, useAnimation, useInView } from 'framer-motion';
 import { useRef } from 'react';
 import { LineChart, Line, ResponsiveContainer, YAxis } from 'recharts';

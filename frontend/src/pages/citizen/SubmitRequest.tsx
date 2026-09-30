@@ -14,6 +14,8 @@ const SubmitRequest: React.FC = () => {
   const [text, setText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [photo, setPhoto] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Status: 'idle' | 'recording' | 'submitting' | 'done'
   const [status, setStatus] = useState<'idle' | 'recording' | 'submitting' | 'done'>('idle');
@@ -72,10 +74,13 @@ const SubmitRequest: React.FC = () => {
     setPipelineStep(0);
     
     const formData = new FormData();
-    formData.append('language', i18n.language);
+    formData.append('language', i18n.language || 'en');
     if (text) formData.append('text', text);
     if (audioBlob) {
       formData.append('audio', audioBlob, 'recording.webm');
+    }
+    if (photo) {
+      formData.append('photo', photo);
     }
     
     // Simulate pipeline steps for UX
@@ -97,11 +102,11 @@ const SubmitRequest: React.FC = () => {
         navigate(`/citizen/confirmation/${result.tracking_id}`, { state: { data: result } });
       }, 1000);
       
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
       clearInterval(interval);
       setStatus('idle');
-      alert("Failed to submit");
+      alert(`Failed to submit: ${e?.message || 'Server connection error'}`);
     }
   };
 
@@ -307,10 +312,37 @@ const SubmitRequest: React.FC = () => {
             placeholder="Or type your problem here..."
           ></textarea>
           <div className="bg-primary-50/80 border-t border-primary-100 p-4 flex justify-between items-center">
-            <button className="px-5 py-2.5 text-ink/70 hover:text-primary-600 bg-white rounded-xl shadow-sm border border-primary-200 flex items-center space-x-2 transition-colors">
-              <Camera size={18} />
-              <span className="font-bold text-sm">Add Photo</span>
-            </button>
+            <input 
+              type="file" 
+              accept="image/*" 
+              className="hidden" 
+              ref={fileInputRef} 
+              onChange={(e) => {
+                if (e.target.files && e.target.files[0]) {
+                  setPhoto(e.target.files[0]);
+                }
+              }} 
+            />
+            {photo ? (
+              <div className="flex items-center space-x-3 bg-white px-4 py-2 rounded-xl shadow-sm border border-primary-200">
+                <span className="text-sm font-medium text-ink truncate max-w-[150px]">{photo.name}</span>
+                <button 
+                  onClick={() => setPhoto(null)}
+                  className="text-red-500 hover:text-red-700 font-bold text-lg leading-none"
+                  title="Remove photo"
+                >
+                  &times;
+                </button>
+              </div>
+            ) : (
+              <button 
+                onClick={() => fileInputRef.current?.click()}
+                className="px-5 py-2.5 text-ink/70 hover:text-primary-600 bg-white rounded-xl shadow-sm border border-primary-200 flex items-center space-x-2 transition-colors"
+              >
+                <Camera size={18} />
+                <span className="font-bold text-sm">Add Photo</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -318,7 +350,7 @@ const SubmitRequest: React.FC = () => {
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={handleSubmit}
-          disabled={!text && !audioBlob}
+          disabled={!text && !audioBlob && !photo}
           className="w-full max-w-md py-4 bg-ink text-white font-bold text-xl rounded-2xl shadow-xl shadow-ink/20 disabled:bg-primary-200 disabled:text-primary-400 disabled:shadow-none flex justify-center items-center space-x-3 transition-all shrink-0 mb-4"
         >
           <span>Submit Request</span>

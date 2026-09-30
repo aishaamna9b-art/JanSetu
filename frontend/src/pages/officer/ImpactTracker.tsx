@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchWithAuth } from '../../lib/api';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, LineChart, Line, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { AlertTriangle, BrainCircuit, Activity } from 'lucide-react';
 import { motion } from 'framer-motion';
 
