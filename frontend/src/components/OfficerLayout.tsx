@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { auth } from '../lib/firebase';
-import { LayoutDashboard, Map, BarChart3, LogOut, Lightbulb, Calculator, FileText, Activity, PlayCircle, X, ChevronRight, Moon, Sun } from 'lucide-react';
+import { LayoutDashboard, Map, BarChart3, LogOut, Lightbulb, Calculator, FileText, Activity, PlayCircle, X, ChevronRight, Moon, Sun, Menu } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { RegionProvider } from './RegionContext';
 
 export default function OfficerLayout() {
   const navigate = useNavigate();
@@ -11,6 +12,7 @@ export default function OfficerLayout() {
   const [tourStep, setTourStep] = useState(0);
   const [isDark, setIsDark] = useState(document.documentElement.classList.contains('dark'));
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const toggleDarkMode = () => {
     if (isDark) {
@@ -43,7 +45,9 @@ export default function OfficerLayout() {
     { path: '/officer/hotspots', title: 'Identify Crisis Zones', desc: 'Use the interactive time-slider map to pinpoint growing infrastructure bottlenecks.' },
     { path: '/officer/gaps', title: 'Analyze the Data', desc: 'Cross-reference citizen demand with existing supply to find where resources are lacking.' },
     { path: '/officer/recommendations', title: 'Let AI Suggest', desc: 'Review AI-generated interventions ranked by maximum impact per rupee.' },
-    { path: '/officer/simulator', title: 'Simulate Outcomes', desc: 'Play with budget constraints and instantly see how reallocating funds changes lives.' }
+    { path: '/officer/simulator', title: 'Simulate Outcomes', desc: 'Play with budget constraints and instantly see how reallocating funds changes lives.' },
+    { path: '/officer/policy', title: 'Policy Brief', desc: 'Generate automated, AI-driven reports for specific regions to present to stakeholders and policymakers.' },
+    { path: '/officer/impact', title: 'Impact Tracker', desc: 'Monitor request resolution rates across districts to evaluate operational efficiency.' }
   ];
 
   useEffect(() => {
@@ -58,9 +62,35 @@ export default function OfficerLayout() {
   };
 
   return (
-    <div className="flex h-screen bg-[#FBF6EC] dark:bg-[#0E1226] text-[#1B1F3B] dark:text-white font-sans overflow-hidden">
+    <RegionProvider>
+      <div className="flex flex-col md:flex-row h-screen bg-[#FBF6EC] dark:bg-[#0E1226] text-[#1B1F3B] dark:text-white font-sans overflow-hidden">
+        {/* Mobile Header */}
+      <div className="md:hidden flex items-center justify-between p-4 bg-[#1B1F3B] text-white z-30">
+        <div className="flex items-center gap-3">
+          <button onClick={() => setIsMobileMenuOpen(true)} className="p-1 hover:bg-white/10 rounded-lg transition-colors">
+            <Menu size={24} />
+          </button>
+          <h1 className="text-xl font-bold font-serif text-[#FBF6EC]">
+            JanSetu <span className="text-[#F28C28]">Control</span>
+          </h1>
+        </div>
+      </div>
+
+      {/* Mobile Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden" 
+          onClick={() => setIsMobileMenuOpen(false)} 
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className={`${isCollapsed ? 'w-20' : 'w-72'} transition-all duration-300 bg-[#1B1F3B] dark:bg-[#0E1226] border-r border-[#1B1F3B]/10 dark:border-white/5 flex flex-col shrink-0 z-20 text-white relative`}>
+      <aside className={`
+        fixed inset-y-0 left-0 z-50 transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+        md:relative md:translate-x-0 transition-all duration-300 ease-in-out
+        ${isCollapsed ? 'md:w-20' : 'md:w-72'} w-72
+        bg-[#1B1F3B] dark:bg-[#0E1226] border-r border-[#1B1F3B]/10 dark:border-white/5 flex flex-col shrink-0 text-white
+      `}>
         <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)', backgroundSize: '10px 10px' }}></div>
         
         <div className="p-6 border-b border-white/10 relative z-10 flex items-center justify-between">
@@ -94,6 +124,7 @@ export default function OfficerLayout() {
                 }`
               }
               title={isCollapsed ? item.label : undefined}
+              onClick={() => setIsMobileMenuOpen(false)}
             >
               {({ isActive }) => (
                 <>
@@ -203,6 +234,7 @@ export default function OfficerLayout() {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+      </div>
+    </RegionProvider>
   );
 }

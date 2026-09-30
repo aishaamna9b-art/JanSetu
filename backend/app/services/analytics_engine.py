@@ -16,14 +16,12 @@ class AnalyticsEngine:
         db = get_db()
         if not db:
             try:
-                # Return 50 mock data rows
-                return pd.read_sql_query("SELECT * FROM requests LIMIT 50", self.conn)
+                return pd.read_sql_query("SELECT * FROM requests", self.conn)
             except Exception:
                 return pd.DataFrame()
             
         try:
-            # Use limit(50) to only fetch 50 items
-            docs = db.collection("requests").limit(50).stream()
+            docs = db.collection("requests").stream()
             records = []
             for doc in docs:
                 d = doc.to_dict()
@@ -32,6 +30,7 @@ class AnalyticsEngine:
                     'id': d.get('id'),
                     'category': d.get('category'),
                     'district': loc.get('district'),
+                    'state': loc.get('state'),
                     'status': d.get('status'),
                     'urgency': d.get('urgency'),
                     'district_code': d.get('district_code')
@@ -39,15 +38,26 @@ class AnalyticsEngine:
             df = pd.DataFrame(records)
             if df.empty:
                 # Fallback to local DB if firestore is empty
-                return pd.read_sql_query("SELECT * FROM requests LIMIT 50", self.conn)
+                return pd.read_sql_query("SELECT * FROM requests", self.conn)
             return df
         except Exception:
-            return pd.read_sql_query("SELECT * FROM requests LIMIT 50", self.conn)
+            return pd.read_sql_query("SELECT * FROM requests", self.conn)
         
-    def get_summary(self) -> Dict[str, Any]:
+    def get_summary(self, state: Optional[str] = None, district: Optional[str] = None) -> Dict[str, Any]:
         req_df = self._get_firestore_requests()
         if req_df.empty:
-            return {"total": 0, "completed": 0, "in_progress": 0, "received": 0, "top_categories": [], "trend": []}
+            return {"total": 0, "resolved_rate": 0.0, "top_categories": [], "by_status": {}, "trend": []}
+            
+        if state:
+            if 'state' in req_df.columns:
+                req_df = req_df[req_df['state'] == state]
+            else:
+                pass # Can't filter by state easily if not in db
+        if district:
+            req_df = req_df[req_df['district'] == district]
+            
+        if req_df.empty:
+            return {"total": 0, "resolved_rate": 0.0, "top_categories": [], "by_status": {}, "trend": []}
             
         status_counts = req_df['status'].value_counts().to_dict()
         top_cats = req_df['category'].value_counts().head(5).to_dict()
@@ -64,8 +74,17 @@ class AnalyticsEngine:
             "trend": [{"date": datetime.now(timezone.utc).isoformat()[:10], "count": len(req_df)}]
         }
         
-    def get_gaps(self) -> List[Dict[str, Any]]:
+    def get_gaps(self, state: Optional[str] = None, district: Optional[str] = None) -> List[Dict[str, Any]]:
         req_df = self._get_firestore_requests()
+        if req_df.empty:
+            return []
+            
+        if state and 'state' in req_df.columns:
+            req_df = req_df[req_df['state'] == state]
+            
+        if district and 'district' in req_df.columns:
+            req_df = req_df[req_df['district'] == district]
+            
         if req_df.empty:
             return []
             
@@ -80,6 +99,12 @@ class AnalyticsEngine:
         infra_df = pd.read_sql_query(query, self.conn)
         
         merged = pd.merge(demand, infra_df, on=['district', 'category'], how='inner')
+        merged = merged.fillna({
+            'population': 100000.0,
+            'allocated_cr': 0.0,
+            'spent_cr': 0.0,
+            'index_score': 0.5,
+        })
         
         results = []
         for _, row in merged.iterrows():
@@ -107,8 +132,8 @@ class AnalyticsEngine:
             
         return sorted(results, key=lambda x: x["gap_score"], reverse=True)
         
-    def get_hotspots(self) -> List[Dict[str, Any]]:
-        gaps = self.get_gaps()
+    def get_hotspots(self, state: Optional[str] = None, district: Optional[str] = None) -> List[Dict[str, Any]]:
+        gaps = self.get_gaps(state=state, district=district)
         hotspots = []
         for g in gaps[:10]:
             hotspots.append({
@@ -126,17 +151,25 @@ class AnalyticsEngine:
         except Exception:
             return []
             
-    def get_recommendations(self, district: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
-        gaps = self.get_gaps()
+    def get_recommendations(self, state: Optional[str] = None, district: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
+        gaps = self.get_gaps(state=state, district=district)
         recs = []
         for i, g in enumerate(gaps):
-            if district and g["district"] != district: continue
             
-            pop = g.get("population", 100000) # Safe fallback just in case
+            pop = g.get("population", 100000)
             gap_pct = 1 - g["infra_index"]
             people_served = int(pop * gap_pct)
             
             cost_estimate = people_served * 5000 / 10000000 # in Cr
+            
+            # Normalize breakdown scores to sum to priority_score (max 100)
+            vol_score = min(35.0, (g["demand_count"] / 500.0) * 10.0)
+            urgency_score = 15.0 # Fixed base urgency
+            severity_score = 15.0 # Fixed base severity
+            infra_score = min(25.0, gap_pct * 30.0)
+            pop_score = min(10.0, (pop / 500000.0) * 5.0)
+            
+            total_score = vol_score + urgency_score + severity_score + infra_score + pop_score
             
             recs.append({
                 "project_id": f"proj-{i}",
@@ -146,15 +179,15 @@ class AnalyticsEngine:
                 "region": g["district"],
                 "people_served": people_served,
                 "cost_estimate": max(0.5, round(cost_estimate, 2)),
-                "priority_score": min(100.0, float(g["gap_score"])),
+                "priority_score": round(total_score, 1),
                 "score_breakdown": {
-                    "volume": float(g["demand_count"]),
-                    "urgency": 4.0,
-                    "severity": 3.0,
-                    "infra_gap": gap_pct,
-                    "population": float(pop)
+                    "volume": round(vol_score, 1),
+                    "urgency": round(urgency_score, 1),
+                    "severity": round(severity_score, 1),
+                    "infra_gap": round(infra_score, 1),
+                    "population": round(pop_score, 1)
                 },
-                "ai_justification": f"High demand ({g['demand_count']} requests) combined with low infrastructure coverage ({g['infra_index']}) in {g['district']} necessitates immediate {g['category']} investment."
+                "ai_justification": f"High demand ({g['demand_count']} requests) combined with low infrastructure coverage ({g['infra_index']:.2f}) in {g['district']} necessitates immediate {g['category']} investment."
             })
             
             if len(recs) >= limit:
@@ -173,6 +206,7 @@ class AnalyticsEngine:
         if req_df.empty:
             return []
             
+        req_df['district'] = req_df['district'].fillna('Unknown')
         districts = req_df['district'].unique()
         results = []
         

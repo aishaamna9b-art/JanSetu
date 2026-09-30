@@ -1,21 +1,27 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchWithAuth } from '../../lib/api';
 import { StatCard } from '../../components/StatCard';
 import { Users, CheckCircle2, TrendingUp, Filter, Activity, Database, AlertCircle } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { INDIA_STATES_DISTRICTS } from '../../lib/indiaData';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell, Legend
 } from 'recharts';
-
+import { SearchableDropdown } from '../../components/SearchableDropdown';
+import { useRegion } from '../../components/RegionContext';
 export default function Overview() {
-  const [filters, setFilters] = useState({ state: '', district: '', category: '', time: 'month' });
+  const { state: regionState, setState: setRegionState, district, setDistrict } = useRegion();
+  const [filters, setFilters] = useState({ category: '', time: 'month' });
+
+  const statesList = Object.keys(INDIA_STATES_DISTRICTS);
+  const districtsList = regionState ? INDIA_STATES_DISTRICTS[regionState] : [];
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['officer-overview', filters],
+    queryKey: ['officer-overview', filters, regionState, district],
     queryFn: () => {
-      const params = new URLSearchParams(filters);
+      const params = new URLSearchParams({ ...filters, state: regionState, district });
       return fetchWithAuth(`/analytics/summary?${params.toString()}`);
     }
   });
@@ -30,7 +36,13 @@ export default function Overview() {
 
   // Generate 50 mock recent requests for the ticker to show database scale
   const recentRequests = Array.from({ length: 50 }, (_, i) => {
-    const districts = ['Lucknow', 'Kanpur', 'Varanasi', 'Agra', 'Prayagraj', 'Meerut', 'Gorakhpur', 'Mathura', 'Bareilly', 'Aligarh'];
+    let districts = ['Lucknow', 'Kanpur', 'Varanasi', 'Agra', 'Prayagraj', 'Meerut', 'Gorakhpur', 'Mathura', 'Bareilly', 'Aligarh'];
+    if (district) {
+      districts = [district];
+    } else if (regionState && districtsList.length > 0) {
+      districts = districtsList;
+    }
+    
     const categories = ['Water', 'Infrastructure', 'Education', 'Health', 'Sanitation'];
     const issues = ['Pipe leak', 'Streetlights broken', 'School roof leaking', 'Hospital lacks medicines', 'Garbage dump overflow', 'Road potholes', 'Drainage blocked'];
     return {
@@ -75,28 +87,27 @@ export default function Overview() {
           <p className="text-[#1B1F3B]/60 dark:text-white/60 mt-1">High-level metrics and citizen signals</p>
         </div>
         
-        <div className="flex flex-wrap items-center gap-3 bg-[#FBF6EC] dark:bg-[#0E1226] p-2 rounded-xl shadow-sm border border-[#1B1F3B]/10 dark:border-white/10">
-          <Filter size={18} className="text-[#1B1F3B]/40 dark:text-white/40 ml-2" />
-          <select 
-            value={filters.state} 
-            onChange={e => setFilters({...filters, state: e.target.value})}
-            className="bg-transparent border-none text-sm focus:ring-0 cursor-pointer font-medium text-[#1B1F3B] dark:text-white/90"
-          >
-            <option value="">All States</option>
-            <option value="UP">Uttar Pradesh</option>
-            <option value="MH">Maharashtra</option>
-          </select>
-          <div className="w-px h-6 bg-[#1B1F3B]/10 dark:bg-white/10"></div>
-          <select 
-            value={filters.district} 
-            onChange={e => setFilters({...filters, district: e.target.value})}
-            className="bg-transparent border-none text-sm focus:ring-0 cursor-pointer font-medium text-[#1B1F3B] dark:text-white/90"
-          >
-            <option value="">All Districts</option>
-            <option value="Lucknow">Lucknow</option>
-            <option value="Kanpur">Kanpur</option>
-          </select>
-          <div className="w-px h-6 bg-[#1B1F3B]/10 dark:bg-white/10"></div>
+        <div className="flex flex-wrap items-center gap-1 bg-[#FBF6EC] dark:bg-[#0E1226] p-1.5 rounded-xl shadow-sm border border-[#1B1F3B]/10 dark:border-white/10">
+          <Filter size={18} className="text-[#1B1F3B]/40 dark:text-white/40 mx-2" />
+          
+          <SearchableDropdown 
+            options={statesList} 
+            value={regionState} 
+            onChange={(val: string) => { setRegionState(val); setDistrict(''); }} 
+            placeholder="All States" 
+          />
+          
+          <div className="w-px h-6 bg-[#1B1F3B]/10 dark:bg-white/10 mx-1"></div>
+          
+          <SearchableDropdown 
+            options={districtsList} 
+            value={district} 
+            onChange={(val: string) => setDistrict(val)} 
+            placeholder="All Districts" 
+            disabled={!regionState}
+          />
+          
+          <div className="w-px h-6 bg-[#1B1F3B]/10 dark:bg-white/10 mx-1"></div>
           <select 
             value={filters.time} 
             onChange={e => setFilters({...filters, time: e.target.value})}
@@ -120,7 +131,7 @@ export default function Overview() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <StatCard 
               title="Total Citizen Requests" 
-              value={(data?.total_requests || 0) + recentRequests.length} 
+              value={data?.total_requests || 0} 
               icon={<Users size={24} />} 
               trend={{ value: '12%', positive: true }}
               isLoading={isLoading}

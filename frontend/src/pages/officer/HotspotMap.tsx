@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { MapPin, TrendingUp, Play, Pause, ChevronRight } from 'lucide-react';
+import 'leaflet.heat';
+import { MapPin, TrendingUp, ChevronRight, Layers } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Sample district data for UP & MH
@@ -16,28 +17,61 @@ const DISTRICTS = [
 
 const CATEGORIES = ['All', 'Water', 'Roads', 'Health'];
 
-// Custom markers using DivIcon for smooth CSS animation
-function AnimatedMarkers({ districts, activeCategory, timeIndex, onSelect }: any) {
+// Heatmap Layer Component
+function HeatmapLayer({ districts, activeCategory }: any) {
   const map = useMap();
   
-  // Clean up old markers
   useEffect(() => {
-    map.eachLayer((layer) => {
-      if (layer instanceof L.Marker) {
-        map.removeLayer(layer);
+    const points = districts.map((d: any) => {
+      let categoryVol = d.baseVol;
+      if (activeCategory !== 'All') {
+        categoryVol = d.categories[activeCategory] || 0;
       }
-    });
+      
+      // We use priority for the color intensity (severity)
+      // If the category has no volume, don't show the point
+      return categoryVol > 0 ? [d.lat, d.lng, d.priorityBase] : null;
+    }).filter(Boolean);
+
+    // @ts-ignore
+    const heatLayer = L.heatLayer(points, {
+      radius: 50,
+      blur: 35,
+      maxZoom: 6,
+      max: 100, // Priority ranges up to 100
+      minOpacity: 0.6,
+      gradient: { 
+        0.4: '#1E7B4F', // Low - Green
+        0.7: '#E9B44C', // Medium - Yellow/Turmeric
+        0.9: '#C8553D', // Critical - Terracotta/Red
+        1.0: '#8B0000'  // Extreme - Dark Red
+      }
+    }).addTo(map);
+
+    return () => {
+      map.removeLayer(heatLayer);
+    };
+  }, [map, districts, activeCategory]);
+
+  return null;
+}
+
+// Custom markers using DivIcon for smooth CSS animation
+function AnimatedMarkers({ districts, activeCategory, onSelect }: any) {
+  const map = useMap();
+  
+  useEffect(() => {
+    // Keep track of markers to remove them on cleanup
+    const markers: any[] = [];
 
     districts.forEach((d: any) => {
-      // Calculate current volume based on time slider and category
-      const timeScale = (timeIndex + 1) / 60; // 0 to 1
       let categoryVol = d.baseVol;
       
       if (activeCategory !== 'All') {
         categoryVol = d.categories[activeCategory] || 0;
       }
       
-      const currentVol = Math.floor(categoryVol * timeScale);
+      const currentVol = categoryVol;
       if (currentVol === 0) return;
 
       const priority = d.priorityBase;
@@ -84,19 +118,22 @@ function AnimatedMarkers({ districts, activeCategory, timeIndex, onSelect }: any
 
       const marker = L.marker([d.lat, d.lng], { icon }).addTo(map);
       marker.on('click', () => onSelect({...d, currentVol, priority, color}));
+      markers.push(marker);
     });
-  }, [map, districts, activeCategory, timeIndex]);
+
+    return () => {
+      markers.forEach(marker => map.removeLayer(marker));
+    };
+  }, [map, districts, activeCategory]);
 
   return null;
 }
 
 export default function HotspotMap() {
   const [activeCategory, setActiveCategory] = useState('All');
-  const [timeIndex, setTimeIndex] = useState(59); // 60 days (0-59)
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [mapType, setMapType] = useState<'standard' | 'heat'>('standard');
   const [selectedCluster, setSelectedCluster] = useState<any>(null);
   
-  // Determine if dark mode is active to switch tiles
   const [isDark, setIsDark] = useState(document.documentElement.classList.contains('dark'));
   
   useEffect(() => {
@@ -106,22 +143,6 @@ export default function HotspotMap() {
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
     return () => observer.disconnect();
   }, []);
-
-  useEffect(() => {
-    let interval: any;
-    if (isPlaying) {
-      interval = setInterval(() => {
-        setTimeIndex(prev => {
-          if (prev >= 59) {
-            setIsPlaying(false);
-            return prev;
-          }
-          return prev + 1;
-        });
-      }, 100);
-    }
-    return () => clearInterval(interval);
-  }, [isPlaying]);
 
   return (
     <div className="h-[calc(100vh-4rem)] md:h-screen flex flex-col md:flex-row bg-[#FBF6EC] dark:bg-[#0E1226] relative overflow-hidden">
@@ -136,27 +157,66 @@ export default function HotspotMap() {
         <MapContainer 
           center={[23.5, 78.5]} 
           zoom={6} 
-          style={{ height: '100%', width: '100%', background: isDark ? '#0E1226' : '#FBF6EC' }}
+          className="absolute inset-0 w-full h-full z-0"
+          style={{ background: isDark ? '#0E1226' : '#FBF6EC' }}
           zoomControl={false}
         >
           <TileLayer
             url={isDark 
               ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' 
-              : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'}
-            attribution='&copy; <a href="https://carto.com/">CartoDB</a>'
+              : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'}
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           />
-          <AnimatedMarkers 
-            districts={DISTRICTS} 
-            activeCategory={activeCategory} 
-            timeIndex={timeIndex} 
-            onSelect={setSelectedCluster} 
-          />
+          {mapType === 'standard' ? (
+            <AnimatedMarkers 
+              districts={DISTRICTS} 
+              activeCategory={activeCategory} 
+              onSelect={setSelectedCluster} 
+            />
+          ) : (
+            <HeatmapLayer 
+              districts={DISTRICTS} 
+              activeCategory={activeCategory} 
+            />
+          )}
         </MapContainer>
 
         {/* Floating Controls Overlay */}
-        <div className="absolute top-6 left-6 z-[400] flex flex-col gap-4 max-w-sm w-full">
+        <div className="absolute top-4 left-4 right-4 md:right-auto md:top-6 md:left-6 z-[400] flex flex-col gap-4 max-w-[calc(100%-2rem)] md:max-w-sm w-full">
+          {/* Map Type Filter */}
+          <div className="bg-white/80 dark:bg-[#1B1F3B]/90 backdrop-blur-md rounded-2xl shadow-lg border border-[#1B1F3B]/10 dark:border-white/10 flex gap-1 p-2">
+            <button
+              onClick={() => {
+                setMapType('standard');
+                setSelectedCluster(null);
+              }}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+                mapType === 'standard' 
+                  ? 'bg-[#1B1F3B] text-[#FBF6EC] dark:bg-white dark:text-[#1B1F3B]' 
+                  : 'text-[#1B1F3B]/70 dark:text-white/70 hover:bg-[#1B1F3B]/5 dark:hover:bg-white/5'
+              }`}
+            >
+              <MapPin size={16} />
+              Standard
+            </button>
+            <button
+              onClick={() => {
+                setMapType('heat');
+                setSelectedCluster(null);
+              }}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+                mapType === 'heat' 
+                  ? 'bg-[#1B1F3B] text-[#FBF6EC] dark:bg-white dark:text-[#1B1F3B]' 
+                  : 'text-[#1B1F3B]/70 dark:text-white/70 hover:bg-[#1B1F3B]/5 dark:hover:bg-white/5'
+              }`}
+            >
+              <Layers size={16} />
+              Heatmap
+            </button>
+          </div>
+
           {/* Category Filter */}
-          <div className="bg-white/80 dark:bg-[#1B1F3B]/90 backdrop-blur-md p-2 rounded-2xl shadow-lg border border-[#1B1F3B]/10 dark:border-white/10 flex gap-1 p-2">
+          <div className="bg-white/80 dark:bg-[#1B1F3B]/90 backdrop-blur-md rounded-2xl shadow-lg border border-[#1B1F3B]/10 dark:border-white/10 flex gap-1 p-2">
             {CATEGORIES.map(cat => (
               <button
                 key={cat}
@@ -171,42 +231,12 @@ export default function HotspotMap() {
               </button>
             ))}
           </div>
-
-          {/* Time Slider */}
-          <div className="bg-white/80 dark:bg-[#1B1F3B]/90 backdrop-blur-md p-4 rounded-2xl shadow-lg border border-[#1B1F3B]/10 dark:border-white/10 flex flex-col gap-3">
-            <div className="flex justify-between items-center">
-              <span className="text-xs font-bold text-[#1B1F3B]/60 dark:text-white/60 uppercase tracking-wide">Last 60 Days</span>
-              <span className="text-xs font-mono font-bold text-[#F28C28]">Day {timeIndex + 1}</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <button 
-                onClick={() => {
-                  if (timeIndex === 59) setTimeIndex(0);
-                  setIsPlaying(!isPlaying);
-                }}
-                className="w-10 h-10 shrink-0 rounded-full bg-[#F28C28]/10 text-[#F28C28] flex items-center justify-center hover:bg-[#F28C28]/20 transition-colors"
-              >
-                {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
-              </button>
-              <input 
-                type="range" 
-                min="0" 
-                max="59" 
-                value={timeIndex}
-                onChange={(e) => {
-                  setIsPlaying(false);
-                  setTimeIndex(parseInt(e.target.value));
-                }}
-                className="flex-1 accent-[#F28C28] h-1.5 bg-[#1B1F3B]/10 dark:bg-white/10 rounded-full appearance-none outline-none cursor-pointer"
-              />
-            </div>
-          </div>
         </div>
       </div>
 
       {/* Side Panel for selected cluster */}
       <AnimatePresence>
-        {selectedCluster && (
+        {selectedCluster && mapType === 'standard' && (
           <motion.div 
             initial={{ x: "100%", opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}

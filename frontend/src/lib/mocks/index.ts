@@ -154,34 +154,40 @@ export async function handleMockRequest(endpoint: string, options: RequestInit) 
   }
 
   if (endpoint.startsWith('/analytics/summary') && (options.method === 'GET' || !options.method)) {
+    const url = new URL(endpoint, 'http://localhost');
+    const state = url.searchParams.get('state');
+    const district = url.searchParams.get('district');
+    
+    // Simulate filtering by returning smaller numbers if state/district is selected
+    let multiplier = 1;
+    if (district) multiplier = 0.05;
+    else if (state) multiplier = 0.2;
+
     return {
-      kpis: {
-        total_requests: 15420,
-        resolved_requests: 8230,
-        avg_resolution_days: 4.5,
-        total_spending: 24000000
-      },
+      total_requests: Math.floor(15420 * multiplier),
+      resolved_rate: 0.65,
       top_categories: [
-        { name: "Water", count: 4500 },
-        { name: "Roads", count: 3200 },
-        { name: "Electricity", count: 2800 },
-        { name: "Sanitation", count: 2100 },
-        { name: "Healthcare", count: 1500 }
+        { category: "Water", count: Math.floor(4500 * multiplier) },
+        { category: "Roads", count: Math.floor(3200 * multiplier) },
+        { category: "Electricity", count: Math.floor(2800 * multiplier) },
+        { category: "Sanitation", count: Math.floor(2100 * multiplier) },
+        { category: "Healthcare", count: Math.floor(1500 * multiplier) }
       ],
       trend: [
-        { date: "Jan", raised: 1200, resolved: 800 },
-        { date: "Feb", raised: 1300, resolved: 900 },
-        { date: "Mar", raised: 1100, resolved: 1000 },
-        { date: "Apr", raised: 1500, resolved: 1200 },
-        { date: "May", raised: 1800, resolved: 1300 },
-        { date: "Jun", raised: 1600, resolved: 1500 }
+        { date: "2023-01-01", count: Math.floor(1200 * multiplier) },
+        { date: "2023-02-01", count: Math.floor(1300 * multiplier) },
+        { date: "2023-03-01", count: Math.floor(1100 * multiplier) },
+        { date: "2023-04-01", count: Math.floor(1500 * multiplier) },
+        { date: "2023-05-01", count: Math.floor(1800 * multiplier) },
+        { date: "2023-06-01", count: Math.floor(1600 * multiplier) }
       ],
-      status_distribution: [
-        { name: "Received", value: 3000 },
-        { name: "Verified", value: 2500 },
-        { name: "Under Review", value: 1690 },
-        { name: "Funded", value: 1200 }
-      ]
+      by_status: {
+        "received": Math.floor(3000 * multiplier),
+        "verified": Math.floor(2500 * multiplier),
+        "under_review": Math.floor(1690 * multiplier),
+        "funded": Math.floor(1200 * multiplier),
+        "completed": Math.floor(7030 * multiplier)
+      }
     };
   }
 

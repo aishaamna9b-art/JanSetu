@@ -7,6 +7,9 @@ import {
 } from 'recharts';
 import { MapPin, AlertTriangle, ArrowUpDown, TrendingUp, IndianRupee } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { INDIA_STATES_DISTRICTS } from '../../lib/indiaData';
+import { SearchableDropdown } from '../../components/SearchableDropdown';
+import { useRegion } from '../../components/RegionContext';
 
 interface GapData {
   block: string;
@@ -19,15 +22,16 @@ interface GapData {
 }
 
 export default function GapAnalysis() {
-  const [district, setDistrict] = useState('Patna');
+  const { state: regionState, setState: setRegionState, district, setDistrict } = useRegion();
   const [sortField, setSortField] = useState<keyof GapData>('gap_score');
   const [sortDesc, setSortDesc] = useState(true);
   const [hoveredBlock, setHoveredBlock] = useState<string | null>(null);
 
   const { data: gapsData, isLoading, error } = useQuery<GapData[]>({
-    queryKey: ['gaps', district],
+    queryKey: ['gaps', regionState, district],
     queryFn: () => {
       const params = new URLSearchParams();
+      if (regionState) params.append('state', regionState);
       if (district) params.append('district', district);
       return fetchWithAuth(`/analytics/gaps?${params.toString()}`);
     }
@@ -81,13 +85,12 @@ export default function GapAnalysis() {
     });
   }, [gaps]);
 
-  // Data for Diverging Bar Chart (Demand vs Spending normalized)
-  const divergingData = useMemo(() => {
-    return sortedGaps.map(g => ({
+  // Data for Dual Axis Bar Chart (Demand vs Spending)
+  const chartData = useMemo(() => {
+    return sortedGaps.slice(0, 10).map(g => ({
       name: g.block,
-      Demand: g.demand_count, // Positive
-      // Make spending negative for diverging effect. Scale it so it's visually comparable to demand.
-      Spending: -Math.round(g.public_spending / 50000), 
+      Demand: g.demand_count,
+      Spending: g.public_spending,
       gap_score: g.gap_score
     }));
   }, [sortedGaps]);
@@ -119,17 +122,22 @@ export default function GapAnalysis() {
           <p className="text-[#1B1F3B]/60 dark:text-white/60 mt-1">Cross-referencing citizen demand with existing infrastructure and spend</p>
         </div>
         
-        <div className="flex items-center gap-3 bg-[#FBF6EC] dark:bg-[#0E1226] p-2 rounded-xl shadow-sm border border-[#1B1F3B]/10 dark:border-white/10">
+        <div className="flex items-center gap-2 bg-[#FBF6EC] dark:bg-[#0E1226] p-2 rounded-xl shadow-sm border border-[#1B1F3B]/10 dark:border-white/10">
           <MapPin size={18} className="text-[#1B1F3B]/40 dark:text-white/40 ml-2" />
-          <select 
-            value={district} 
-            onChange={e => setDistrict(e.target.value)}
-            className="bg-transparent border-none text-sm focus:ring-0 cursor-pointer font-medium text-[#1B1F3B] dark:text-white/90"
-          >
-            <option value="Patna">Patna District</option>
-            <option value="Gaya">Gaya District</option>
-            <option value="Chennai">Chennai District</option>
-          </select>
+          <SearchableDropdown 
+            options={Object.keys(INDIA_STATES_DISTRICTS)}
+            value={regionState}
+            onChange={(val: string) => { setRegionState(val); setDistrict(''); }}
+            placeholder="All States"
+          />
+          <div className="w-px h-6 bg-[#1B1F3B]/10 dark:bg-white/10 mx-1"></div>
+          <SearchableDropdown 
+            options={regionState ? INDIA_STATES_DISTRICTS[regionState] : []}
+            value={district}
+            onChange={(val: string) => setDistrict(val)}
+            placeholder="All Districts"
+            disabled={!regionState}
+          />
         </div>
       </div>
 
@@ -152,7 +160,7 @@ export default function GapAnalysis() {
             <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(#1B1F3B 1px, transparent 1px)', backgroundSize: '10px 10px' }}></div>
             <h2 className="text-lg font-bold mb-2 text-[#1B1F3B] dark:text-white font-serif relative z-10">Need Gap Radar</h2>
             <p className="text-xs text-[#1B1F3B]/50 dark:text-white/50 mb-4 relative z-10">Demand vs Infra vs Spend across categories</p>
-            <div className="h-[300px] w-full relative z-10">
+            <div className="h-[350px] w-full relative z-10 mt-4">
               <ResponsiveContainer width="100%" height="100%">
                 <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
                   <PolarGrid stroke="#F28C28" className="opacity-30" />
@@ -168,34 +176,63 @@ export default function GapAnalysis() {
             </div>
           </div>
 
-          {/* Diverging Bar Chart */}
+          {/* Demand vs Spend Dual Axis Chart */}
           <div className="lg:col-span-2 bg-[#FBF6EC] dark:bg-[#0E1226] p-6 rounded-2xl shadow-sm border border-[#1B1F3B]/10 dark:border-white/10 relative overflow-hidden">
-            <h2 className="text-lg font-bold mb-2 text-[#1B1F3B] dark:text-white font-serif relative z-10">Demand & Spend Divergence</h2>
-            <p className="text-xs text-[#1B1F3B]/50 dark:text-white/50 mb-6 relative z-10">Blocks with high demand (right) but low relative spend (left) indicate severe gaps.</p>
-            <div className="h-[300px] w-full relative z-10">
+            <h2 className="text-lg font-bold mb-2 text-[#1B1F3B] dark:text-white font-serif relative z-10">Demand vs. Spend (Top 10 Critical Blocks)</h2>
+            <p className="text-xs text-[#1B1F3B]/50 dark:text-white/50 mb-6 relative z-10">Comparing citizen demand volume against allocated public spending to identify the most severe funding gaps.</p>
+            <div className="h-[450px] w-full relative z-10 mt-4">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={divergingData} layout="vertical" margin={{ top: 10, right: 30, left: 40, bottom: 20 }} barGap={0} barSize={12}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="currentColor" className="text-[#1B1F3B]/10 dark:text-white/10" />
-                  <XAxis type="number" stroke="#F28C28" tick={{fill: '#F28C28', opacity: 1, fontSize: 12}} className="font-mono" domain={['dataMin - 10', 'dataMax + 10']} />
-                  <YAxis dataKey="name" type="category" stroke="#F28C28" tick={{fill: '#F28C28', opacity: 1, fontSize: 12}} className="font-sans" width={80} />
-                  <ReferenceLine x={0} stroke="currentColor" className="text-[#1B1F3B]/40 dark:text-white/40" />
+                <BarChart data={chartData} margin={{ top: 20, right: 10, left: -20, bottom: 90 }} barGap={2} barCategoryGap="20%">
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-[#1B1F3B]/10 dark:text-white/10" />
+                  <XAxis 
+                    dataKey="name" 
+                    stroke="#F28C28" 
+                    tick={{fill: '#F28C28', fontSize: 12, fontWeight: 500}} 
+                    angle={-45}
+                    textAnchor="end"
+                    interval={0}
+                  />
+                  <YAxis 
+                    yAxisId="left" 
+                    orientation="left" 
+                    stroke="#C8553D" 
+                    tick={{fill: '#C8553D', fontSize: 11}}
+                    width={60}
+                  />
+                  <YAxis 
+                    yAxisId="right" 
+                    orientation="right" 
+                    stroke="#E9B44C" 
+                    tick={{fill: '#E9B44C', fontSize: 11}}
+                    tickFormatter={(value) => {
+                      if (value >= 10000000) return `₹${(value / 10000000).toFixed(0)}Cr`;
+                      if (value >= 100000) return `₹${(value / 100000).toFixed(0)}L`;
+                      return `₹${value}`;
+                    }}
+                    width={60}
+                  />
                   <RechartsTooltip 
                     cursor={{fill: 'rgba(27, 31, 59, 0.05)'}} 
                     contentStyle={{ borderRadius: '12px', border: '1px solid rgba(27, 31, 59, 0.1)', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} 
                     formatter={(value: any, name: any) => {
-                      if (name === 'Spending') return [Math.abs(value), 'Spend (Relative)'];
-                      return [value, name];
+                      if (name === 'Public Spend') {
+                        const num = Number(value);
+                        if (num >= 10000000) return [`₹${(num / 10000000).toFixed(2)}Cr`, 'Public Spend'];
+                        if (num >= 100000) return [`₹${(num / 100000).toFixed(2)}L`, 'Public Spend'];
+                        return [`₹${num}`, 'Public Spend'];
+                      }
+                      return [value, 'Citizen Demand'];
                     }}
                   />
-                  <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
-                  <Bar dataKey="Spending" name="Spend (Relative)" radius={[4, 0, 0, 4]}>
-                    {divergingData.map((entry, index) => (
-                      <Cell key={`cell-spend-${index}`} fill={hoveredBlock === entry.name ? '#b45309' : '#E9B44C'} className="transition-all duration-300" />
+                  <Legend verticalAlign="top" align="right" wrapperStyle={{ paddingBottom: '20px' }} iconType="circle" />
+                  <Bar yAxisId="left" dataKey="Demand" name="Citizen Demand" radius={[4, 4, 0, 0]} barSize={12}>
+                    {chartData.map((entry, index) => (
+                      <Cell key={`cell-demand-${index}`} fill={hoveredBlock === entry.name ? '#991b1b' : '#C8553D'} className="transition-all duration-300" />
                     ))}
                   </Bar>
-                  <Bar dataKey="Demand" name="Citizen Demand" radius={[0, 4, 4, 0]}>
-                    {divergingData.map((entry, index) => (
-                      <Cell key={`cell-demand-${index}`} fill={hoveredBlock === entry.name ? '#991b1b' : '#C8553D'} className="transition-all duration-300" />
+                  <Bar yAxisId="right" dataKey="Spending" name="Public Spend" radius={[4, 4, 0, 0]} barSize={12}>
+                    {chartData.map((entry, index) => (
+                      <Cell key={`cell-spend-${index}`} fill={hoveredBlock === entry.name ? '#b45309' : '#E9B44C'} className="transition-all duration-300" />
                     ))}
                   </Bar>
                 </BarChart>
