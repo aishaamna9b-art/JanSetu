@@ -1,12 +1,12 @@
 import React from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { Mic, List, LogOut, Home, User as UserIcon } from 'lucide-react';
+import { Mic, List, LogOut, Home, User as UserIcon, Users } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { signOut } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 
 const CitizenLayout: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -24,7 +24,9 @@ const CitizenLayout: React.FC = () => {
       <div className="h-1 w-full bg-gradient-to-r from-orange-500 via-white to-green-500 shrink-0" />
       <header className="bg-white px-4 py-2 shadow-sm flex items-center justify-between border-b border-primary-200 z-50 shrink-0">
         <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-xs font-bold text-gray-500">LOGO</div>
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white shadow-sm">
+            <Users size={18} />
+          </div>
           <h1 className="font-serif font-bold text-xl text-ink">JanSetu</h1>
         </div>
         <div className="flex items-center space-x-3">
@@ -33,7 +35,11 @@ const CitizenLayout: React.FC = () => {
             <button className="text-base font-bold text-gray-600 hover:text-blue-600 px-1">A</button>
             <button className="text-lg font-bold text-gray-600 hover:text-blue-600 px-1">A+</button>
           </div>
-          <select className="text-sm border-none bg-transparent text-gray-600 font-medium focus:ring-0 cursor-pointer">
+          <select 
+            value={i18n.language}
+            onChange={(e) => i18n.changeLanguage(e.target.value)}
+            className="text-sm border-none bg-transparent text-gray-600 font-medium focus:ring-0 cursor-pointer"
+          >
             <option value="en">English</option>
             <option value="hi">हिन्दी</option>
             <option value="ta">தமிழ்</option>
@@ -65,7 +71,7 @@ const CitizenLayout: React.FC = () => {
           {({ isActive }) => (
             <>
               {isActive ? <Mic size={24} className="text-primary-600" /> : <Home size={24} />}
-              <span className="text-xs mt-1 font-sans font-medium">Home</span>
+              <span className="text-xs mt-1 font-sans font-medium">{t('home', 'Home')}</span>
             </>
           )}
         </NavLink>
@@ -87,7 +93,7 @@ const CitizenLayout: React.FC = () => {
           }
         >
           <UserIcon size={24} />
-          <span className="text-xs mt-1 font-sans font-medium">Profile</span>
+          <span className="text-xs mt-1 font-sans font-medium">{t('profile', 'Profile')}</span>
         </NavLink>
       </nav>
     </div>

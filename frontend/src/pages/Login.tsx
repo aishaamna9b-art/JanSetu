@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Shield, User } from 'lucide-react';
 import { LanguageSelector } from '../components/LanguageSelector';
+import { useTranslation } from 'react-i18next';
 
 const phrases = [
   "Your voice. Your village. Your future.",
@@ -31,6 +32,7 @@ const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -59,7 +61,7 @@ const Login: React.FC = () => {
     <div className="min-h-screen flex flex-col md:flex-row bg-primary-50 dark:bg-dark-bg font-sans overflow-hidden">
       
       {/* Left Side - Branding & Multilingual Animated Text */}
-      <div className="relative flex-1 bg-ink text-primary-50 flex flex-col justify-center items-center p-12 overflow-hidden">
+      <div className="relative w-full min-h-[40vh] md:min-h-0 md:flex-1 bg-ink text-primary-50 flex flex-col justify-center items-center p-12 overflow-hidden">
         {/* Animated Background */}
         <div className="absolute inset-0 z-0">
           <motion.div 
@@ -99,18 +101,18 @@ const Login: React.FC = () => {
       </div>
 
       {/* Right Side - Login Card */}
-      <div className="flex-1 flex flex-col justify-center items-center p-6 md:p-12 relative z-10 bg-primary-50 dark:bg-dark-bg">
-        <div className="absolute top-6 right-6">
+      <div className="w-full min-h-[60vh] md:min-h-0 md:flex-1 flex flex-col justify-center items-center p-6 pt-24 md:p-12 relative z-10 bg-primary-50 dark:bg-dark-bg">
+        <div className="absolute top-6 right-6 z-50">
           <LanguageSelector />
         </div>
 
-        <div className="w-full max-w-md space-y-10">
+        <div className="w-full max-w-md space-y-10 my-auto">
           <div className="text-center">
             <h2 className="text-3xl font-serif font-bold text-ink dark:text-primary-50 mb-3">
-              {selectedRole ? `Login as ${selectedRole.charAt(0).toUpperCase() + selectedRole.slice(1)}` : 'Welcome'}
+              {selectedRole ? (selectedRole === 'citizen' ? t('login_as_citizen') : t('login_as_officer')) : t('login_welcome')}
             </h2>
             <p className="text-ink/70 dark:text-primary-100/70 font-medium">
-              {selectedRole ? 'Enter your credentials to continue' : 'Choose your portal to continue'}
+              {selectedRole ? t('enter_credentials') : t('choose_portal')}
             </p>
           </div>
 
@@ -134,9 +136,9 @@ const Login: React.FC = () => {
                   <div className="relative bg-primary-50 dark:bg-ink p-5 rounded-full mb-4 shadow-sm group-hover:shadow-md transition-all duration-300">
                     <User size={44} className="text-primary-600 dark:text-primary-400 group-hover:scale-110 transition-transform duration-300" strokeWidth={1.75} />
                   </div>
-                  <h3 className="relative text-2xl font-bold text-ink dark:text-primary-50 font-serif">Citizen</h3>
+                  <h3 className="relative text-2xl font-bold text-ink dark:text-primary-50 font-serif">{t('citizen_title')}</h3>
                   <p className="relative mt-2 text-sm text-ink/60 dark:text-primary-100/60 text-center font-medium">
-                    Submit requests and track village development
+                    {t('citizen_desc')}
                   </p>
                 </motion.button>
 
@@ -151,9 +153,9 @@ const Login: React.FC = () => {
                   <div className="relative bg-primary-50 dark:bg-ink p-5 rounded-full mb-4 shadow-sm group-hover:shadow-md transition-all duration-300">
                     <Shield size={44} className="text-secondary-500 dark:text-secondary-400 group-hover:scale-110 transition-transform duration-300" strokeWidth={1.75} />
                   </div>
-                  <h3 className="relative text-2xl font-bold text-ink dark:text-primary-50 font-serif">Officer</h3>
+                  <h3 className="relative text-2xl font-bold text-ink dark:text-primary-50 font-serif">{t('officer_title')}</h3>
                   <p className="relative mt-2 text-sm text-ink/60 dark:text-primary-100/60 text-center font-medium">
-                    Monitor hotspots and allocate budgets
+                    {t('officer_desc')}
                   </p>
                 </motion.button>
               </motion.div>
@@ -167,25 +169,25 @@ const Login: React.FC = () => {
                 className="space-y-5 bg-white dark:bg-ink/60 p-8 rounded-[2rem] shadow-layered border border-gray-100 dark:border-gray-800"
               >
                 <div>
-                  <label className="block text-sm font-medium text-ink dark:text-primary-50 mb-1">Email</label>
+                  <label className="block text-sm font-medium text-ink dark:text-primary-50 mb-1">{t('email_label')}</label>
                   <input 
                     type="email" 
                     required 
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-ink/80 text-ink dark:text-primary-50 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all"
-                    placeholder="Enter your email"
+                    placeholder={t('email_placeholder')}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-ink dark:text-primary-50 mb-1">Password</label>
+                  <label className="block text-sm font-medium text-ink dark:text-primary-50 mb-1">{t('password_label')}</label>
                   <input 
                     type="password" 
                     required 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-ink/80 text-ink dark:text-primary-50 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all"
-                    placeholder="Enter your password"
+                    placeholder={t('password_placeholder')}
                   />
                 </div>
                 
@@ -195,10 +197,10 @@ const Login: React.FC = () => {
                     onClick={() => setSelectedRole(null)}
                     className="text-sm font-medium text-gray-500 hover:text-ink dark:hover:text-primary-50 transition-colors"
                   >
-                    ← Back to roles
+                    {t('back_to_roles')}
                   </button>
                   <a href="#" className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 transition-colors">
-                    Forgot password?
+                    {t('forgot_password')}
                   </a>
                 </div>
 
@@ -207,7 +209,7 @@ const Login: React.FC = () => {
                   disabled={isSubmitting}
                   className="w-full py-3.5 mt-4 rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-medium text-lg shadow-sm hover:shadow transition-all disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  {isSubmitting ? 'Signing in...' : 'Sign In'}
+                  {isSubmitting ? t('signing_in') : t('sign_in')}
                 </button>
               </motion.form>
             )}
