@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchWithAuth } from '../../lib/api';
 import { User, MapPin, Phone, Settings as SettingsIcon, Shield, FileText } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const Settings: React.FC = () => {
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('personal');
   const [isEditing, setIsEditing] = useState(false);
 
@@ -58,7 +60,7 @@ const Settings: React.FC = () => {
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto font-sans">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-serif font-bold text-gray-900">My Profile</h1>
+        <h1 className="text-2xl font-serif font-bold text-gray-900">{t('my_profile')}</h1>
         <div className="flex gap-2">
           {isEditing && (
             <button 
@@ -74,7 +76,7 @@ const Settings: React.FC = () => {
               isEditing ? 'bg-primary-600 text-white hover:bg-primary-700' : 'border border-gray-300 text-gray-700 bg-white hover:bg-gray-50'
             }`}
           >
-            {isEditing ? 'Save Changes' : 'Edit Profile'}
+            {isEditing ? t('save_changes') : t('edit_profile')}
           </button>
         </div>
       </div>
@@ -84,15 +86,15 @@ const Settings: React.FC = () => {
           <div className="absolute top-0 right-0 p-4 opacity-20">
             <Shield size={100} />
           </div>
-          <p className="text-blue-100 text-sm font-medium mb-1 uppercase tracking-wider">Citizen Registration ID</p>
+          <p className="text-blue-100 text-sm font-medium mb-1 uppercase tracking-wider">{t('citizen_reg_id')}</p>
           <p className="font-mono text-3xl font-bold mb-4">{profile.registration_id}</p>
           <div className="flex space-x-6">
             <div>
-              <p className="text-blue-200 text-xs">Name</p>
+              <p className="text-blue-200 text-xs">{t('name')}</p>
               <p className="font-medium">{profile?.personal?.full_name}</p>
             </div>
             <div>
-              <p className="text-blue-200 text-xs">District</p>
+              <p className="text-blue-200 text-xs">{t('district')}</p>
               <p className="font-medium">{profile?.address?.district}</p>
             </div>
           </div>
@@ -100,18 +102,18 @@ const Settings: React.FC = () => {
       )}
 
       {stats && (
-        <div className="grid grid-cols-3 gap-4 mb-8">
-          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm text-center">
-            <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-            <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">Total Requests</p>
+        <div className="grid grid-cols-3 gap-2 md:gap-4 mb-8">
+          <div className="bg-white p-2 md:p-4 rounded-xl border border-gray-200 shadow-sm text-center flex flex-col justify-center h-full">
+            <p className="text-xl md:text-2xl font-bold text-gray-900">{stats.total}</p>
+            <p className="text-[9px] md:text-xs text-gray-500 uppercase font-bold tracking-wide md:tracking-wider break-words mt-1 leading-tight">{t('total_requests')}</p>
           </div>
-          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm text-center">
-            <p className="text-2xl font-bold text-green-600">{stats.resolved}</p>
-            <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">Resolved</p>
+          <div className="bg-white p-2 md:p-4 rounded-xl border border-gray-200 shadow-sm text-center flex flex-col justify-center h-full">
+            <p className="text-xl md:text-2xl font-bold text-green-600">{stats.resolved}</p>
+            <p className="text-[9px] md:text-xs text-gray-500 uppercase font-bold tracking-wide md:tracking-wider break-words mt-1 leading-tight">{t('resolved')}</p>
           </div>
-          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm text-center">
-            <p className="text-2xl font-bold text-orange-600">{stats.pending}</p>
-            <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">Pending</p>
+          <div className="bg-white p-2 md:p-4 rounded-xl border border-gray-200 shadow-sm text-center flex flex-col justify-center h-full">
+            <p className="text-xl md:text-2xl font-bold text-orange-600">{stats.pending}</p>
+            <p className="text-[9px] md:text-xs text-gray-500 uppercase font-bold tracking-wide md:tracking-wider break-words mt-1 leading-tight">{t('pending')}</p>
           </div>
         </div>
       )}
@@ -119,29 +121,29 @@ const Settings: React.FC = () => {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col md:flex-row">
         <div className="w-full md:w-64 bg-gray-50 border-r border-gray-200 flex flex-col">
           <button onClick={() => setActiveTab('personal')} className={`flex items-center space-x-3 p-4 text-left transition-colors ${activeTab === 'personal' ? 'bg-white text-blue-600 font-bold border-l-4 border-blue-600' : 'text-gray-600 hover:bg-gray-100 border-l-4 border-transparent'}`}>
-            <User size={20} /><span>Personal Details</span>
+            <User size={20} /><span>{t('personal_details')}</span>
           </button>
           <button onClick={() => setActiveTab('contact')} className={`flex items-center space-x-3 p-4 text-left transition-colors ${activeTab === 'contact' ? 'bg-white text-blue-600 font-bold border-l-4 border-blue-600' : 'text-gray-600 hover:bg-gray-100 border-l-4 border-transparent'}`}>
-            <Phone size={20} /><span>Contact Details</span>
+            <Phone size={20} /><span>{t('contact_details')}</span>
           </button>
           <button onClick={() => setActiveTab('address')} className={`flex items-center space-x-3 p-4 text-left transition-colors ${activeTab === 'address' ? 'bg-white text-blue-600 font-bold border-l-4 border-blue-600' : 'text-gray-600 hover:bg-gray-100 border-l-4 border-transparent'}`}>
-            <MapPin size={20} /><span>Address</span>
+            <MapPin size={20} /><span>{t('address')}</span>
           </button>
           <button onClick={() => setActiveTab('preferences')} className={`flex items-center space-x-3 p-4 text-left transition-colors ${activeTab === 'preferences' ? 'bg-white text-blue-600 font-bold border-l-4 border-blue-600' : 'text-gray-600 hover:bg-gray-100 border-l-4 border-transparent'}`}>
-            <SettingsIcon size={20} /><span>Preferences</span>
+            <SettingsIcon size={20} /><span>{t('preferences')}</span>
           </button>
           <button onClick={() => setActiveTab('privacy')} className={`flex items-center space-x-3 p-4 text-left transition-colors ${activeTab === 'privacy' ? 'bg-white text-blue-600 font-bold border-l-4 border-blue-600' : 'text-gray-600 hover:bg-gray-100 border-l-4 border-transparent'}`}>
-            <Shield size={20} /><span>Privacy & Consent</span>
+            <Shield size={20} /><span>{t('privacy_consent')}</span>
           </button>
         </div>
         
         <div className="flex-1 p-6">
           {activeTab === 'personal' && (
             <div className="space-y-4">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Personal Details</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">{t('personal_details')}</h2>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs text-gray-500 font-bold uppercase mb-1">Full Name</label>
+                  <label className="block text-xs text-gray-500 font-bold uppercase mb-1">{t('full_name')}</label>
                   {isEditing ? (
                     <input type="text" value={editData?.personal?.full_name || ''} onChange={(e) => handleChange('personal', 'full_name', e.target.value)} className="w-full px-3 py-2 border rounded-md" />
                   ) : (
