@@ -5,12 +5,13 @@ import { fetchWithAuth } from '../lib/api';
 
 export const RequireProfileComplete: React.FC = () => {
   const location = useLocation();
-  const { data: profile, isLoading } = useQuery({
+  const { data: profile, isLoading, isError } = useQuery({
     queryKey: ['my-profile'],
     queryFn: () => fetchWithAuth('/users/me'),
   });
 
   if (isLoading) return <div className="p-8 text-center">Loading Profile...</div>;
+  if (isError) return <div className="p-8 text-center text-red-500">Failed to load profile. Please try again.</div>;
 
   const isRegisterRoute = location.pathname.startsWith('/citizen/register');
   const isSuccessRoute = location.pathname.startsWith('/citizen/success');
