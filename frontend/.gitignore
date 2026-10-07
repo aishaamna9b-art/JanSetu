@@ -21,4 +21,16 @@ dist-ssr
 *.ntvs*
 *.njsproj
 *.sln
+
+# Secrets
+.env
+.env.*
+!.env.example
+serviceAccount*.json
+*-firebase-adminsdk-*.json
+firebase-adminsdk*.json
+service-account*.json
+__pycache__/
+venv/
+.venv/
 *.sw?
