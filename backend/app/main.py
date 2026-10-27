@@ -15,7 +15,7 @@ app = FastAPI(
 app.add_exception_handler(AppError, app_error_handler)
 
 origins = [
-    "http://localhost:5173",
+    "*"
 ]
 if settings.ALLOWED_ORIGINS:
     origins.extend([o.strip() for o in settings.ALLOWED_ORIGINS.split(",") if o.strip()])
