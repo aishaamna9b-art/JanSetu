@@ -24,6 +24,10 @@ venv2/
 .venv/
 env/
 ENV/
+*venv*/
+*env*/
+test_env*/
+backend/test_env*/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
